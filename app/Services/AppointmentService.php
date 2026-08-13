@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Professional;
 use App\Models\Treatment;
+use App\Notificaciones\NotificadorDeCitas;
 use App\Repositories\Contracts\AppointmentRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
@@ -41,6 +42,7 @@ class AppointmentService
         private readonly PatientRepositoryInterface $patients,
         private readonly AvailabilityCache $cache,
         private readonly TenantContext $tenant,
+        private readonly NotificadorDeCitas $notificador,
     ) {}
 
     private const WITH = ['professional', 'patient', 'treatment'];
@@ -84,7 +86,13 @@ class AppointmentService
 
         $this->invalidarCache($professional->id, $inicio);
 
-        return $appointment->load(self::WITH);
+        $appointment->load(self::WITH);
+
+        // La cita ya esta persistida: la notificacion es best-effort y se encola
+        // aparte, nunca puede tumbar la reserva.
+        $this->notificador->confirmacion($appointment);
+
+        return $appointment;
     }
 
     /**
@@ -103,6 +111,9 @@ class AppointmentService
         if (! $appointment->isCancelada()) {
             $this->appointments->cancel($appointment);
             $this->invalidarCache($appointment->professional_id, $appointment->fecha_hora);
+
+            // Notificacion de cancelacion best-effort, encolada aparte.
+            $this->notificador->cancelacion($appointment);
         }
 
         return $appointment->refresh()->load(self::WITH);

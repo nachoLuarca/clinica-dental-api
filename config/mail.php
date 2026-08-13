@@ -49,6 +49,19 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // Brevo (Sendinblue) via SMTP para produccion. En dev se usa 'smtp'
+        // (Mailpit). Para activar Brevo: MAIL_MAILER=brevo + credenciales SMTP
+        // de Brevo en .env. El codigo de la app no cambia (mismo canal correo).
+        'brevo' => [
+            'transport' => 'smtp',
+            'scheme' => 'smtp',
+            'host' => env('BREVO_SMTP_HOST', 'smtp-relay.brevo.com'),
+            'port' => env('BREVO_SMTP_PORT', 587),
+            'username' => env('BREVO_SMTP_USERNAME'),
+            'password' => env('BREVO_SMTP_PASSWORD'),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
