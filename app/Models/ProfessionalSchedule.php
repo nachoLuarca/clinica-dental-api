@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\ProfessionalScheduleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProfessionalSchedule extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProfessionalScheduleFactory> */
+    /** @use HasFactory<ProfessionalScheduleFactory> */
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [

@@ -2,13 +2,14 @@
 
 namespace Database\Factories;
 
+use App\Models\Patient;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends Factory<\App\Models\Patient>
+ * @extends Factory<Patient>
  */
 class PatientFactory extends Factory
 {

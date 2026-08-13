@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Treatment;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 interface TreatmentRepositoryInterface
 {
@@ -16,9 +17,9 @@ interface TreatmentRepositoryInterface
 
     /**
      * @param  array<int, int>  $ids
-     * @return \Illuminate\Database\Eloquent\Collection<int, Treatment>
+     * @return Collection<int, Treatment>
      */
-    public function findManyByIds(array $ids): \Illuminate\Database\Eloquent\Collection;
+    public function findManyByIds(array $ids): Collection;
 
     /**
      * @param  array<string, mixed>  $data

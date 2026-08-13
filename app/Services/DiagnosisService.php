@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Diagnosis;
+use App\Models\Patient;
 use App\Repositories\Contracts\DiagnosisRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
@@ -80,7 +81,7 @@ class DiagnosisService
     private function assertPatientExists(int $patientId): void
     {
         if ($this->patients->find($patientId) === null) {
-            throw (new ModelNotFoundException)->setModel(\App\Models\Patient::class);
+            throw (new ModelNotFoundException)->setModel(Patient::class);
         }
     }
 

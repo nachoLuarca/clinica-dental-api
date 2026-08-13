@@ -20,6 +20,7 @@ class TreatmentStoreRequest extends FormRequest
             'nombre' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],
             'precio' => ['required', 'numeric', 'min:0'],
+            'duracion_minutos' => ['sometimes', 'integer', 'min:5', 'max:480'],
             'es_diferencial' => ['boolean'],
             'activo' => ['boolean'],
         ];

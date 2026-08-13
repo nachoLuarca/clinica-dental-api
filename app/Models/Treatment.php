@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\TreatmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,13 +13,14 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Treatment extends Model
 {
-    /** @use HasFactory<\Database\Factories\TreatmentFactory> */
+    /** @use HasFactory<TreatmentFactory> */
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [
         'nombre',
         'descripcion',
         'precio',
+        'duracion_minutos',
         'es_diferencial',
         'activo',
     ];
@@ -27,6 +29,7 @@ class Treatment extends Model
     {
         return [
             'precio' => 'decimal:2',
+            'duracion_minutos' => 'integer',
             'es_diferencial' => 'boolean',
             'activo' => 'boolean',
         ];

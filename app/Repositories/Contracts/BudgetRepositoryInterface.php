@@ -21,7 +21,7 @@ interface BudgetRepositoryInterface
     /**
      * Crea el presupuesto y reemplaza sus lineas dentro de una transaccion.
      *
-     * @param  array<string, mixed>  $data   Cabecera (patient_id, estado, notas, total).
+     * @param  array<string, mixed>  $data  Cabecera (patient_id, estado, notas, total).
      * @param  array<int, array<string, mixed>>  $items  Lineas ya calculadas.
      */
     public function create(array $data, array $items): Budget;

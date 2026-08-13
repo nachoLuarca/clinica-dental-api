@@ -51,4 +51,12 @@ class Professional extends Model
     {
         return $this->hasMany(Diagnosis::class);
     }
+
+    /**
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

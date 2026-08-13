@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\BudgetItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BudgetItem extends Model
 {
-    /** @use HasFactory<\Database\Factories\BudgetItemFactory> */
+    /** @use HasFactory<BudgetItemFactory> */
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [

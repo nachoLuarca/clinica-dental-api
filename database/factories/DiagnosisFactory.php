@@ -2,13 +2,14 @@
 
 namespace Database\Factories;
 
+use App\Models\Diagnosis;
 use App\Models\Patient;
 use App\Models\Professional;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Diagnosis>
+ * @extends Factory<Diagnosis>
  */
 class DiagnosisFactory extends Factory
 {
