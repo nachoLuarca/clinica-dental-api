@@ -4,6 +4,7 @@ use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
+use App\Http\Controllers\Publico\CatalogController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
@@ -27,12 +28,20 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// --- PUBLICO (sitio de pacientes, sin login) ---
+// El tenant se resuelve por el slug de clinica del header 'X-Clinica'
+// (middleware 'tenant.publico'). Rate limiting por tenant + IP ('throttle:publico').
+Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->group(function () {
+    Route::get('tratamientos', [CatalogController::class, 'index']);
+    Route::get('availability', [AvailabilityController::class, 'index']);
+});
+
 // --- STAFF (portal clinica) ---
 Route::prefix('staff')->group(function () {
-    Route::post('register', [StaffAuthController::class, 'register']);
+    Route::post('register', [StaffAuthController::class, 'register'])->middleware('throttle:register');
     Route::post('login', [StaffAuthController::class, 'login'])->middleware('throttle:login');
 
-    Route::middleware(['auth:staff', 'tenant'])->group(function () {
+    Route::middleware(['auth:staff', 'abilities:staff', 'tenant'])->group(function () {
         Route::get('me', [StaffAuthController::class, 'me']);
         Route::post('logout', [StaffAuthController::class, 'logout']);
 
@@ -60,10 +69,10 @@ Route::prefix('staff')->group(function () {
 
 // --- PACIENTE (sitio publico + reservas) ---
 Route::prefix('paciente')->group(function () {
-    Route::post('register', [PatientAuthController::class, 'register']);
+    Route::post('register', [PatientAuthController::class, 'register'])->middleware('throttle:register');
     Route::post('login', [PatientAuthController::class, 'login'])->middleware('throttle:login');
 
-    Route::middleware(['auth:paciente', 'tenant'])->group(function () {
+    Route::middleware(['auth:paciente', 'abilities:paciente', 'tenant'])->group(function () {
         Route::get('me', [PatientAuthController::class, 'me']);
         Route::post('logout', [PatientAuthController::class, 'logout']);
 

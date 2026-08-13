@@ -13,11 +13,23 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Resuelve el tenant del usuario autenticado. Se registra como alias
-        // 'tenant' para colgarlo de las rutas autenticadas (junto a los guards
-        // en el paso 3). Debe ejecutarse SIEMPRE despues de la autenticacion.
+        // Headers de seguridad basicos en todas las respuestas de la API.
+        $middleware->api(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+
+        // Alias de middleware del proyecto:
+        //  - 'tenant': resuelve el tenant del usuario AUTENTICADO (nunca de input
+        //    del cliente). Debe correr SIEMPRE despues de la autenticacion.
+        //  - 'tenant.publico': resuelve el tenant por slug de clinica (header
+        //    X-Clinica) para endpoints publicos sin sesion (catalogo/disponibilidad).
+        //  - 'abilities'/'ability': verificacion de abilities del token Sanctum
+        //    (defensa en profundidad sobre la separacion de guards staff/paciente).
         $middleware->alias([
             'tenant' => \App\Http\Middleware\ResolveTenant::class,
+            'tenant.publico' => \App\Http\Middleware\ResolvePublicTenant::class,
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+            'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

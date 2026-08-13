@@ -29,4 +29,18 @@ return [
     */
     'guards' => ['staff', 'paciente', 'web', 'sanctum'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Header de tenant para endpoints publicos
+    |--------------------------------------------------------------------------
+    |
+    | En los endpoints publicos (catalogo/disponibilidad del sitio de pacientes)
+    | no hay usuario autenticado, asi que el frontend indica QUE clinica esta
+    | mostrando mediante este header, que contiene el slug de la clinica. El
+    | middleware ResolvePublicTenant lo valida contra la tabla de tenants: el id
+    | interno del tenant nunca viaja por el cliente.
+    |
+    */
+    'public_header' => env('TENANT_PUBLIC_HEADER', 'X-Clinica'),
+
 ];
