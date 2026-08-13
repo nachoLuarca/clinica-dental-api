@@ -58,4 +58,21 @@ interface AppointmentRepositoryInterface
     public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator;
 
     public function cancel(Appointment $appointment): Appointment;
+
+    /**
+     * Citas ACTIVAS (reservadas/confirmadas) cuyo inicio cae en la ventana
+     * [desde, hasta] y a las que aun no se les envio recordatorio. Insumo del
+     * comando programado de recordatorios; barre TODOS los tenants (el comando
+     * corre sin contexto de tenant, por eso el scope global no filtra).
+     *
+     * @param  array<int, string>  $with
+     * @return Collection<int, Appointment>
+     */
+    public function dueForReminder(Carbon $desde, Carbon $hasta, array $with = []): Collection;
+
+    /**
+     * Marca la cita como ya recordada (evita reenviar el recordatorio en la
+     * siguiente pasada del comando).
+     */
+    public function markReminded(Appointment $appointment): void;
 }

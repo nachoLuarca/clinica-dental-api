@@ -47,6 +47,7 @@ class Appointment extends Model
         'duracion_minutos',
         'estado',
         'notas',
+        'recordatorio_enviado_at',
     ];
 
     protected function casts(): array
@@ -55,6 +56,7 @@ class Appointment extends Model
             'fecha_hora' => 'datetime',
             'fecha_hora_fin' => 'datetime',
             'duracion_minutos' => 'integer',
+            'recordatorio_enviado_at' => 'datetime',
         ];
     }
 

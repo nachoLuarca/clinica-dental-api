@@ -11,7 +11,24 @@
       "ports": ["8080:8000"],
       "volumes": ["../:/var/www/html"],
       "env_file": ["../.env"],
-      "depends_on": ["db", "redis"],
+      "depends_on": ["db", "redis", "whatsapp"],
+      "networks": ["clinica_dental_net"]
+    },
+    "whatsapp": {
+      "build": {
+        "context": "../whatsapp-service",
+        "dockerfile": "Dockerfile"
+      },
+      "container_name": "clinica_dental_whatsapp",
+      "restart": "unless-stopped",
+      "environment": {
+        "PORT": "3000",
+        "WHATSAPP_MOCK": "${WHATSAPP_MOCK:-true}",
+        "WHATSAPP_SERVICE_TOKEN": "${WHATSAPP_SERVICE_TOKEN:-}",
+        "WHATSAPP_AUTH_DIR": "/app/auth"
+      },
+      "ports": ["3001:3000"],
+      "volumes": ["clinica_dental_whatsapp_auth:/app/auth"],
       "networks": ["clinica_dental_net"]
     },
     "db": {
@@ -43,7 +60,8 @@
     }
   },
   "volumes": {
-    "clinica_dental_db_data": {}
+    "clinica_dental_db_data": {},
+    "clinica_dental_whatsapp_auth": {}
   },
   "networks": {
     "clinica_dental_net": {

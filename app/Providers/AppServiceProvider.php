@@ -13,6 +13,8 @@ use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
 use App\Repositories\Contracts\StaffRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\TreatmentRepositoryInterface;
+use App\Notificaciones\Canales\CorreoNotificacionServicio;
+use App\Notificaciones\Canales\WhatsAppNotificacionServicio;
 use App\Repositories\DiagnosisRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\ProfessionalRepository;
@@ -74,6 +76,17 @@ class AppServiceProvider extends ServiceProvider
             AppointmentRepositoryInterface::class,
             AppointmentRepository::class,
         );
+
+        // Canales de notificacion (paso 6). Cada uno implementa la misma interfaz
+        // NotificacionServicio; se les inyecta su config desde .env (nunca
+        // secretos hardcodeados). El resto del codigo no depende de estas clases
+        // concretas, sino del NotificadorDeCitas / CanalNotificacionManager.
+        $this->app->bind(CorreoNotificacionServicio::class, function () {
+            return new CorreoNotificacionServicio(config('notificaciones.correo.mailer'));
+        });
+        $this->app->bind(WhatsAppNotificacionServicio::class, function () {
+            return new WhatsAppNotificacionServicio(config('notificaciones.whatsapp'));
+        });
     }
 
     /**

@@ -1,0 +1,20 @@
+{
+  "name": "clinica-dental-whatsapp",
+  "version": "1.0.0",
+  "description": "Microservicio de WhatsApp (Baileys) para la API de la clinica dental. Corre aparte del proceso PHP; la API de Laravel lo invoca por HTTP interno.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

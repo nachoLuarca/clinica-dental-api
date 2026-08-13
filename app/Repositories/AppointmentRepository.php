@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Appointment;
+use App\Models\Scopes\TenantScope;
 use App\Repositories\Contracts\AppointmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -68,5 +69,25 @@ class AppointmentRepository implements AppointmentRepositoryInterface
         $appointment->update(['estado' => Appointment::ESTADO_CANCELADA]);
 
         return $appointment->refresh();
+    }
+
+    public function dueForReminder(Carbon $desde, Carbon $hasta, array $with = []): Collection
+    {
+        // Barrido global de mantenimiento: sin TenantScope (el comando corre sin
+        // contexto de tenant). Cada cita conserva su tenant_id, y el mensaje se
+        // arma con la clinica correcta via la relacion tenant.
+        return Appointment::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->with($with)
+            ->whereIn('estado', [Appointment::ESTADO_RESERVADA, Appointment::ESTADO_CONFIRMADA])
+            ->whereNull('recordatorio_enviado_at')
+            ->whereBetween('fecha_hora', [$desde, $hasta])
+            ->orderBy('fecha_hora')
+            ->get();
+    }
+
+    public function markReminded(Appointment $appointment): void
+    {
+        $appointment->forceFill(['recordatorio_enviado_at' => Carbon::now()])->saveQuietly();
     }
 }
