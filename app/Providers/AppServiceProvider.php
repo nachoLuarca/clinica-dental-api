@@ -2,14 +2,22 @@
 
 namespace App\Providers;
 
+use App\Repositories\BudgetRepository;
+use App\Repositories\Contracts\BudgetRepositoryInterface;
+use App\Repositories\Contracts\DiagnosisRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
+use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
 use App\Repositories\Contracts\StaffRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\TreatmentRepositoryInterface;
+use App\Repositories\DiagnosisRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\ProfessionalRepository;
+use App\Repositories\ProfessionalScheduleRepository;
 use App\Repositories\StaffRepository;
 use App\Repositories\TenantRepository;
+use App\Repositories\TreatmentRepository;
 use App\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -43,6 +51,22 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             PatientRepositoryInterface::class,
             PatientRepository::class,
+        );
+        $this->app->bind(
+            ProfessionalScheduleRepositoryInterface::class,
+            ProfessionalScheduleRepository::class,
+        );
+        $this->app->bind(
+            DiagnosisRepositoryInterface::class,
+            DiagnosisRepository::class,
+        );
+        $this->app->bind(
+            TreatmentRepositoryInterface::class,
+            TreatmentRepository::class,
+        );
+        $this->app->bind(
+            BudgetRepositoryInterface::class,
+            BudgetRepository::class,
         );
     }
 

@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use App\Models\Professional;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -19,7 +20,18 @@ interface ProfessionalRepositoryInterface
      */
     public function all(): Collection;
 
-    public function find(int $id): ?Professional;
+    /**
+     * Listado paginado. $with permite eager loading explicito (evitar N+1).
+     *
+     * @param  array<int, string>  $with
+     * @return LengthAwarePaginator<int, Professional>
+     */
+    public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator;
+
+    /**
+     * @param  array<int, string>  $with
+     */
+    public function find(int $id, array $with = []): ?Professional;
 
     /**
      * @param  array<string, mixed>  $data

@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Patient;
 use App\Models\Scopes\TenantScope;
 use App\Repositories\Contracts\PatientRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PatientRepository implements PatientRepositoryInterface
 {
@@ -28,5 +29,30 @@ class PatientRepository implements PatientRepositoryInterface
     public function create(array $data): Patient
     {
         return Patient::query()->create($data);
+    }
+
+    public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator
+    {
+        return Patient::query()
+            ->with($with)
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
+    public function find(int $id, array $with = []): ?Patient
+    {
+        return Patient::query()->with($with)->find($id);
+    }
+
+    public function update(Patient $patient, array $data): Patient
+    {
+        $patient->update($data);
+
+        return $patient->refresh();
+    }
+
+    public function delete(Patient $patient): void
+    {
+        $patient->delete();
     }
 }

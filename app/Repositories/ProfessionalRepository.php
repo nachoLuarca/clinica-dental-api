@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Professional;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class ProfessionalRepository implements ProfessionalRepositoryInterface
@@ -13,9 +14,17 @@ class ProfessionalRepository implements ProfessionalRepositoryInterface
         return Professional::query()->get();
     }
 
-    public function find(int $id): ?Professional
+    public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator
     {
-        return Professional::query()->find($id);
+        return Professional::query()
+            ->with($with)
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
+    public function find(int $id, array $with = []): ?Professional
+    {
+        return Professional::query()->with($with)->find($id);
     }
 
     public function create(array $data): Professional
