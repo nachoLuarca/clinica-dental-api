@@ -57,4 +57,12 @@ class Patient extends Authenticatable
     {
         return $this->hasMany(Budget::class);
     }
+
+    /**
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

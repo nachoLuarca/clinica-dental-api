@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\BudgetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Budget extends Model
 {
-    /** @use HasFactory<\Database\Factories\BudgetFactory> */
+    /** @use HasFactory<BudgetFactory> */
     use BelongsToTenant, HasFactory;
 
     /** Estados validos del presupuesto. */

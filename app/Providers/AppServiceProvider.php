@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Repositories\AppointmentRepository;
 use App\Repositories\BudgetRepository;
+use App\Repositories\Contracts\AppointmentRepositoryInterface;
 use App\Repositories\Contracts\BudgetRepositoryInterface;
 use App\Repositories\Contracts\DiagnosisRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
@@ -68,6 +70,10 @@ class AppServiceProvider extends ServiceProvider
             BudgetRepositoryInterface::class,
             BudgetRepository::class,
         );
+        $this->app->bind(
+            AppointmentRepositoryInterface::class,
+            AppointmentRepository::class,
+        );
     }
 
     /**
@@ -86,6 +92,13 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             return Limit::perMinute(5)->by($key);
+        });
+
+        // Rate limiting del endpoint de disponibilidad (endpoint semipublico que
+        // ambos frontends consultan seguido). Se limita por usuario autenticado
+        // si lo hay, y si no por IP, para acotar el abuso sin frenar el uso normal.
+        RateLimiter::for('availability', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ? 'u'.$request->user()->id : $request->ip());
         });
     }
 }

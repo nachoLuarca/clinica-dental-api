@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
+use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
+use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
 use App\Http\Controllers\Staff\PatientController;
@@ -44,6 +47,14 @@ Route::prefix('staff')->group(function () {
             ->parameters(['treatments' => 'treatment']);
         Route::apiResource('budgets', BudgetController::class)
             ->parameters(['budgets' => 'budget']);
+
+        // Disponibilidad y citas (paso 5). El staff reserva para pacientes de su
+        // clinica y consulta/cancela las citas del tenant.
+        Route::get('availability', [AvailabilityController::class, 'index'])
+            ->middleware('throttle:availability');
+        Route::apiResource('appointments', StaffAppointmentController::class)
+            ->only(['index', 'store', 'show', 'destroy'])
+            ->parameters(['appointments' => 'appointment']);
     });
 });
 
@@ -55,5 +66,13 @@ Route::prefix('paciente')->group(function () {
     Route::middleware(['auth:paciente', 'tenant'])->group(function () {
         Route::get('me', [PatientAuthController::class, 'me']);
         Route::post('logout', [PatientAuthController::class, 'logout']);
+
+        // Disponibilidad y reservas del propio paciente (paso 5). El paciente
+        // solo lista/cancela SUS citas; el patient_id sale del token, no del body.
+        Route::get('availability', [AvailabilityController::class, 'index'])
+            ->middleware('throttle:availability');
+        Route::apiResource('appointments', PatientAppointmentController::class)
+            ->only(['index', 'store', 'show', 'destroy'])
+            ->parameters(['appointments' => 'appointment']);
     });
 });

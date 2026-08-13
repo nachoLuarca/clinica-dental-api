@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Professional;
+use App\Models\ProfessionalSchedule;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\ProfessionalSchedule>
+ * @extends Factory<ProfessionalSchedule>
  */
 class ProfessionalScheduleFactory extends Factory
 {

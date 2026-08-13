@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Database\Factories\DiagnosisFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Diagnosis extends Model
 {
-    /** @use HasFactory<\Database\Factories\DiagnosisFactory> */
+    /** @use HasFactory<DiagnosisFactory> */
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [
