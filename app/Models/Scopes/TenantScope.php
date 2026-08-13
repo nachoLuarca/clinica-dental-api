@@ -2,6 +2,7 @@
 
 namespace App\Models\Scopes;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -24,7 +25,7 @@ class TenantScope implements Scope
             return;
         }
 
-        /** @var \App\Models\Concerns\BelongsToTenant $model */
+        /** @var BelongsToTenant $model */
         $column = $model->getQualifiedTenantColumn();
 
         $builder->where($column, $context->tenantId());

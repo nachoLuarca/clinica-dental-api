@@ -2,9 +2,18 @@
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
+use App\Repositories\Contracts\StaffRepositoryInterface;
+use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\PatientRepository;
 use App\Repositories\ProfessionalRepository;
+use App\Repositories\StaffRepository;
+use App\Repositories\TenantRepository;
 use App\Tenancy\TenantContext;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +32,18 @@ class AppServiceProvider extends ServiceProvider
             ProfessionalRepositoryInterface::class,
             ProfessionalRepository::class,
         );
+        $this->app->bind(
+            TenantRepositoryInterface::class,
+            TenantRepository::class,
+        );
+        $this->app->bind(
+            StaffRepositoryInterface::class,
+            StaffRepository::class,
+        );
+        $this->app->bind(
+            PatientRepositoryInterface::class,
+            PatientRepository::class,
+        );
     }
 
     /**
@@ -30,6 +51,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Rate limiting del login (paso 3; el detalle fino es el paso 7). Se
+        // limita por combinacion de clinica + email + IP, para que intentos
+        // contra una cuenta no bloqueen a otras y para frenar fuerza bruta.
+        RateLimiter::for('login', function (Request $request) {
+            $key = implode('|', [
+                (string) $request->input('clinica'),
+                (string) $request->input('email'),
+                $request->ip(),
+            ]);
+
+            return Limit::perMinute(5)->by($key);
+        });
     }
 }

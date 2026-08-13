@@ -47,4 +47,12 @@ class Tenant extends Model
     {
         return $this->hasMany(Professional::class);
     }
+
+    /**
+     * @return HasMany<Patient, $this>
+     */
+    public function patients(): HasMany
+    {
+        return $this->hasMany(Patient::class);
+    }
 }

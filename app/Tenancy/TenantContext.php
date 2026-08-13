@@ -39,6 +39,7 @@ class TenantContext
      * tenant previo al terminar. Util para jobs en cola, seeders y tests.
      *
      * @template T
+     *
      * @param  callable():T  $callback
      * @return T
      */
