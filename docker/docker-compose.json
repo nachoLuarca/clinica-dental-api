@@ -1,0 +1,53 @@
+{
+  "name": "clinica_dental",
+  "services": {
+    "api": {
+      "build": {
+        "context": "..",
+        "dockerfile": "docker/Dockerfile"
+      },
+      "container_name": "clinica_dental_api",
+      "restart": "unless-stopped",
+      "ports": ["8080:8000"],
+      "volumes": ["../:/var/www/html"],
+      "env_file": ["../.env"],
+      "depends_on": ["db", "redis"],
+      "networks": ["clinica_dental_net"]
+    },
+    "db": {
+      "image": "postgres:16-alpine",
+      "container_name": "clinica_dental_db",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_DB": "clinica_dental",
+        "POSTGRES_USER": "clinica",
+        "POSTGRES_PASSWORD": "secret"
+      },
+      "ports": ["5433:5432"],
+      "volumes": ["clinica_dental_db_data:/var/lib/postgresql/data"],
+      "networks": ["clinica_dental_net"]
+    },
+    "redis": {
+      "image": "redis:7-alpine",
+      "container_name": "clinica_dental_redis",
+      "restart": "unless-stopped",
+      "ports": ["6379:6379"],
+      "networks": ["clinica_dental_net"]
+    },
+    "mailpit": {
+      "image": "axllent/mailpit:latest",
+      "container_name": "clinica_dental_mailpit",
+      "restart": "unless-stopped",
+      "ports": ["8026:8025", "1026:1025"],
+      "networks": ["clinica_dental_net"]
+    }
+  },
+  "volumes": {
+    "clinica_dental_db_data": {}
+  },
+  "networks": {
+    "clinica_dental_net": {
+      "driver": "bridge"
+    }
+  }
+}
