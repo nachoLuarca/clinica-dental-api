@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
+use App\Http\Controllers\Staff\BudgetController;
+use App\Http\Controllers\Staff\DiagnosisController;
+use App\Http\Controllers\Staff\PatientController;
+use App\Http\Controllers\Staff\ProfessionalController;
+use App\Http\Controllers\Staff\TreatmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +32,18 @@ Route::prefix('staff')->group(function () {
     Route::middleware(['auth:staff', 'tenant'])->group(function () {
         Route::get('me', [StaffAuthController::class, 'me']);
         Route::post('logout', [StaffAuthController::class, 'logout']);
+
+        // CRUDs base (paso 4). Todos tenant-scoped por el middleware 'tenant'.
+        Route::apiResource('professionals', ProfessionalController::class)
+            ->parameters(['professionals' => 'professional']);
+        Route::apiResource('patients', PatientController::class)
+            ->parameters(['patients' => 'patient']);
+        Route::apiResource('patients.diagnoses', DiagnosisController::class)
+            ->parameters(['patients' => 'patient', 'diagnoses' => 'diagnosis']);
+        Route::apiResource('treatments', TreatmentController::class)
+            ->parameters(['treatments' => 'treatment']);
+        Route::apiResource('budgets', BudgetController::class)
+            ->parameters(['budgets' => 'budget']);
     });
 });
 
