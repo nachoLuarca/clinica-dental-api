@@ -94,9 +94,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Rate limiting del login (paso 3; el detalle fino es el paso 7). Se
-        // limita por combinacion de clinica + email + IP, para que intentos
-        // contra una cuenta no bloqueen a otras y para frenar fuerza bruta.
+        // Rate limiting del login. Se limita por combinacion de clinica + email
+        // + IP, para que intentos contra una cuenta no bloqueen a otras y para
+        // frenar fuerza bruta. El limite se puede ajustar por .env.
         RateLimiter::for('login', function (Request $request) {
             $key = implode('|', [
                 (string) $request->input('clinica'),
@@ -104,14 +104,38 @@ class AppServiceProvider extends ServiceProvider
                 $request->ip(),
             ]);
 
-            return Limit::perMinute(5)->by($key);
+            return Limit::perMinute((int) config('seguridad.rate_limits.login', 5))->by($key);
         });
 
-        // Rate limiting del endpoint de disponibilidad (endpoint semipublico que
-        // ambos frontends consultan seguido). Se limita por usuario autenticado
-        // si lo hay, y si no por IP, para acotar el abuso sin frenar el uso normal.
+        // Rate limiting del registro (staff y paciente). Frena la creacion masiva
+        // de cuentas. Se limita por clinica + IP.
+        RateLimiter::for('register', function (Request $request) {
+            $key = implode('|', [
+                (string) $request->input('clinica'),
+                $request->ip(),
+            ]);
+
+            return Limit::perMinute((int) config('seguridad.rate_limits.register', 10))->by($key);
+        });
+
+        // Rate limiting de disponibilidad para usuarios AUTENTICADOS (staff y
+        // paciente logueado). Se limita por usuario si lo hay, si no por IP.
         RateLimiter::for('availability', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ? 'u'.$request->user()->id : $request->ip());
+            return Limit::perMinute((int) config('seguridad.rate_limits.availability', 60))
+                ->by($request->user()?->id ? 'u'.$request->user()->id : $request->ip());
+        });
+
+        // Rate limiting de los endpoints PUBLICOS (catalogo y disponibilidad del
+        // sitio de pacientes). Como pide la arquitectura, se limita POR TENANT Y
+        // POR IP. Se toma el slug de clinica directamente del header (mismo que
+        // valida 'tenant.publico') en vez del TenantContext, para no depender del
+        // orden en que corran throttle vs. el middleware de tenant: asi la clave
+        // es determinista y cada clinica/IP tiene su propio cupo.
+        RateLimiter::for('publico', function (Request $request) {
+            $slug = trim((string) $request->header(config('tenancy.public_header', 'X-Clinica'), ''));
+            $key = 'c:'.($slug !== '' ? $slug : 'sin-clinica').'|ip:'.$request->ip();
+
+            return Limit::perMinute((int) config('seguridad.rate_limits.publico', 30))->by($key);
         });
     }
 }
