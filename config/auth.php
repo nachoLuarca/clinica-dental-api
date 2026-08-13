@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Patient;
 use App\Models\User;
 
 return [
@@ -38,9 +39,28 @@ return [
     */
 
     'guards' => [
+        // Guard de sesion heredado del scaffold. No se usa desde la API (que es
+        // stateless por token) pero se conserva para utilidades internas/tests.
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+
+        // Guard del STAFF de clinica. Token Sanctum ligado al provider 'staff'
+        // (modelo User). Sanctum valida que el tokenable sea exactamente ese
+        // modelo (hasValidProvider), por lo que un token de paciente NUNCA
+        // autentica aqui.
+        'staff' => [
+            'driver' => 'sanctum',
+            'provider' => 'staff',
+        ],
+
+        // Guard del PACIENTE. Token Sanctum ligado al provider 'pacientes'
+        // (modelo Patient). Independiente del guard 'staff': un token de staff
+        // NUNCA autentica aqui.
+        'paciente' => [
+            'driver' => 'sanctum',
+            'provider' => 'pacientes',
         ],
     ],
 
@@ -67,10 +87,17 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        // Staff de clinica: reutiliza el modelo User (tabla users).
+        'staff' => [
+            'driver' => 'eloquent',
+            'model' => User::class,
+        ],
+
+        // Pacientes: modelo/tabla propia, aislada por tenant.
+        'pacientes' => [
+            'driver' => 'eloquent',
+            'model' => Patient::class,
+        ],
     ],
 
     /*

@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\BelongsToTenant;
-use Database\Factories\UserFactory;
+use Database\Factories\PatientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,26 +12,28 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * Usuario STAFF de una clinica (guard 'staff'). Aislado por tenant.
+ * Paciente de una clinica (guard 'paciente'). Aislado por tenant.
  *
- * Autentica exclusivamente por token Sanctum a traves del provider 'staff'.
- * Un token de paciente nunca resuelve a este modelo.
+ * Autentica exclusivamente por token Sanctum a traves del provider 'pacientes'.
+ * Un token de staff nunca resuelve a este modelo, y viceversa: los dos guards
+ * son independientes.
  */
-#[Fillable(['tenant_id', 'name', 'email', 'password'])]
+#[Fillable(['tenant_id', 'nombre', 'email', 'password', 'fecha_nacimiento'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class Patient extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
+    /** @use HasFactory<PatientFactory> */
     use BelongsToTenant, HasApiTokens, HasFactory, Notifiable;
 
+    protected $table = 'patients';
+
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
+            'fecha_nacimiento' => 'date',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
