@@ -1,0 +1,824 @@
+openapi: 3.0.3
+info:
+  title: Clinica Dental API
+  version: "1.0.0"
+  description: |
+    Backend unico (Laravel) del SaaS multi-tenant para clinicas dentales.
+    Sirve a dos frontends: `clinica-dental-portal` (staff) y
+    `clinica-dental-paciente` (pacientes / sitio publico).
+
+    ## Multi-tenant
+    Cada clinica es un tenant aislado por columna `tenant_id` + global scope.
+    El `tenant_id` NUNCA se recibe del cliente: se resuelve server-side del
+    usuario autenticado (endpoints privados) o del header `X-Clinica`
+    (endpoints publicos sin login).
+
+    ## Autenticacion
+    Dos guards Sanctum independientes con abilities:
+      - `staff`    (portal de la clinica) -> token con ability `staff`.
+      - `paciente` (sitio de pacientes)   -> token con ability `paciente`.
+    Un token de un guard nunca autoriza endpoints del otro (401), y un token
+    del modelo correcto sin la ability requerida se rechaza (403).
+    Se envia como `Authorization: Bearer <token>`.
+
+    ## Errores comunes
+      - 401 no autenticado / token de otro guard.
+      - 403 token sin la ability requerida.
+      - 404 recurso inexistente o de otro tenant (aislamiento).
+      - 409 `slot_no_disponible` (choque de reserva, bloqueo optimista).
+      - 422 validacion de input (Form Request).
+      - 429 rate limit superado (login, register, disponibilidad, publico).
+
+servers:
+  - url: http://localhost:8080/api
+    description: Desarrollo (Docker, api en puerto remapeado 8080)
+
+tags:
+  - name: Auth Staff
+    description: Registro / login del staff de la clinica (guard staff)
+  - name: Auth Paciente
+    description: Registro / login de pacientes (guard paciente)
+  - name: Profesionales
+    description: CRUD de profesionales y sus horarios (staff)
+  - name: Pacientes
+    description: Registro de pacientes y diagnosticos (staff)
+  - name: Tratamientos
+    description: Catalogo de tratamientos / servicios (staff)
+  - name: Presupuestos
+    description: Presupuestos con estado y total calculado (staff)
+  - name: Disponibilidad
+    description: Slots libres por profesional + tratamiento + fecha
+  - name: Citas Staff
+    description: Reservas gestionadas por el staff
+  - name: Citas Paciente
+    description: Reservas del propio paciente autenticado
+  - name: Publico
+    description: Catalogo y disponibilidad sin login (header X-Clinica)
+  - name: Documentacion
+    description: Contrato OpenAPI
+
+paths:
+  # ----------------------------- AUTH STAFF -----------------------------
+  /staff/register:
+    post:
+      tags: [Auth Staff]
+      summary: Registrar staff
+      description: "Rate limit: throttle:register."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffRegister' }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /staff/login:
+    post:
+      tags: [Auth Staff]
+      summary: Login staff
+      description: "Rate limit: throttle:login."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffLogin' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /staff/me:
+    get:
+      tags: [Auth Staff]
+      summary: Staff autenticado
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /staff/logout:
+    post:
+      tags: [Auth Staff]
+      summary: Cerrar sesion staff (revoca el token actual)
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --------------------------- AUTH PACIENTE ----------------------------
+  /paciente/register:
+    post:
+      tags: [Auth Paciente]
+      summary: Registrar paciente
+      description: "Rate limit: throttle:register."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PatientRegister' }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /paciente/login:
+    post:
+      tags: [Auth Paciente]
+      summary: Login paciente
+      description: "Rate limit: throttle:login."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PatientLogin' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /paciente/me:
+    get:
+      tags: [Auth Paciente]
+      summary: Paciente autenticado
+      security: [{ pacienteAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /paciente/logout:
+    post:
+      tags: [Auth Paciente]
+      summary: Cerrar sesion paciente (revoca el token actual)
+      security: [{ pacienteAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --------------------------- PROFESIONALES ----------------------------
+  /staff/professionals:
+    get:
+      tags: [Profesionales]
+      summary: Listar profesionales del tenant
+      security: [{ staffAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Profesionales]
+      summary: Crear profesional (con horarios opcionales)
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProfessionalInput' } } }
+      responses:
+        '201': { description: Creado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/professionals/{professional}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Profesionales]
+      summary: Ver profesional
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Profesionales]
+      summary: Actualizar profesional
+      security: [{ staffAuth: [] }]
+      requestBody:
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProfessionalInput' } } }
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Profesionales]
+      summary: Eliminar profesional
+      security: [{ staffAuth: [] }]
+      responses:
+        '204': { description: Sin contenido }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------ PACIENTES -----------------------------
+  /staff/patients:
+    get:
+      tags: [Pacientes]
+      summary: Listar pacientes del tenant
+      security: [{ staffAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Pacientes]
+      summary: Registrar paciente (desde el portal)
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PatientInput' } } }
+      responses:
+        '201': { description: Creado }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/patients/{patient}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Pacientes]
+      summary: Ver paciente
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Pacientes]
+      summary: Actualizar paciente
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Pacientes]
+      summary: Eliminar paciente
+      security: [{ staffAuth: [] }]
+      responses:
+        '204': { description: Sin contenido }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /staff/patients/{patient}/diagnoses:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Pacientes]
+      summary: Listar diagnosticos del paciente
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Pacientes]
+      summary: Registrar diagnostico (a cargo del profesional)
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DiagnosisInput' } } }
+      responses:
+        '201': { description: Creado }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/patients/{patient}/diagnoses/{diagnosis}:
+    parameters:
+      - { $ref: '#/components/parameters/IdPath' }
+      - name: diagnosis
+        in: path
+        required: true
+        schema: { type: integer }
+    put:
+      tags: [Pacientes]
+      summary: Actualizar diagnostico
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Pacientes]
+      summary: Eliminar diagnostico
+      security: [{ staffAuth: [] }]
+      responses:
+        '204': { description: Sin contenido }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------- TRATAMIENTOS ---------------------------
+  /staff/treatments:
+    get:
+      tags: [Tratamientos]
+      summary: Listar tratamientos del tenant
+      security: [{ staffAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+    post:
+      tags: [Tratamientos]
+      summary: Crear tratamiento (incluye atencion diferencial / no listada)
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TreatmentInput' } } }
+      responses:
+        '201': { description: Creado }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/treatments/{treatment}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Tratamientos]
+      summary: Ver tratamiento
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Tratamientos]
+      summary: Actualizar tratamiento
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Tratamientos]
+      summary: Eliminar tratamiento
+      security: [{ staffAuth: [] }]
+      responses:
+        '204': { description: Sin contenido }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------- PRESUPUESTOS ---------------------------
+  /staff/budgets:
+    get:
+      tags: [Presupuestos]
+      summary: Listar presupuestos del tenant
+      security: [{ staffAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+    post:
+      tags: [Presupuestos]
+      summary: Crear presupuesto
+      description: |
+        El `total` lo calcula el servidor a partir de las lineas (ignora
+        cualquier `total` enviado). Cada linea es un tratamiento del catalogo
+        (`treatment_id`, del que se toma snapshot de nombre y precio) o una
+        linea libre / diferencial (`nombre` + `precio_unitario`).
+        El `patient_id` y los `treatment_id` deben pertenecer al mismo tenant
+        (si no -> 422).
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BudgetInput' } } }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/Budget' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/budgets/{budget}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Presupuestos]
+      summary: Ver presupuesto
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Presupuestos]
+      summary: Actualizar presupuesto (estado y/o lineas; recalcula total)
+      security: [{ staffAuth: [] }]
+      requestBody:
+        content: { application/json: { schema: { $ref: '#/components/schemas/BudgetInput' } } }
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Presupuestos]
+      summary: Eliminar presupuesto
+      security: [{ staffAuth: [] }]
+      responses:
+        '204': { description: Sin contenido }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------- DISPONIBILIDAD --------------------------
+  /staff/availability:
+    get:
+      tags: [Disponibilidad]
+      summary: Slots libres (staff)
+      description: "Cacheado en Redis, invalidado al crear/cancelar cita. Rate limit: throttle:availability."
+      security: [{ staffAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProfessionalId' }
+        - { $ref: '#/components/parameters/TreatmentId' }
+        - { $ref: '#/components/parameters/Fecha' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AvailabilityResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /paciente/availability:
+    get:
+      tags: [Disponibilidad]
+      summary: Slots libres (paciente autenticado)
+      security: [{ pacienteAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProfessionalId' }
+        - { $ref: '#/components/parameters/TreatmentId' }
+        - { $ref: '#/components/parameters/Fecha' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AvailabilityResponse' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ------------------------------ CITAS STAFF ---------------------------
+  /staff/appointments:
+    get:
+      tags: [Citas Staff]
+      summary: Listar citas del tenant
+      security: [{ staffAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+    post:
+      tags: [Citas Staff]
+      summary: Crear cita para un paciente de la clinica
+      description: |
+        Valida disponibilidad en tiempo real y aplica bloqueo optimista via
+        indice unico parcial (professional_id + fecha_hora en citas no
+        canceladas). Si el slot ya no esta libre responde 409 `slot_no_disponible`.
+        Al crearse encola confirmacion por correo y WhatsApp (best-effort).
+      security: [{ staffAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/StaffAppointmentInput' } } }
+      responses:
+        '201': { description: Creada, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/SlotUnavailable' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /staff/appointments/{appointment}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Citas Staff]
+      summary: Ver cita
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Citas Staff]
+      summary: Cancelar cita (libera el slot, invalida cache, notifica)
+      security: [{ staffAuth: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------- CITAS PACIENTE --------------------------
+  /paciente/appointments:
+    get:
+      tags: [Citas Paciente]
+      summary: Listar SOLO las citas del paciente autenticado
+      security: [{ pacienteAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+    post:
+      tags: [Citas Paciente]
+      summary: Reservar cita para si mismo
+      description: |
+        El `patient_id` sale del token (nunca del body). Mismo bloqueo optimista
+        que el endpoint de staff: 409 `slot_no_disponible` si el slot se ocupo.
+      security: [{ pacienteAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PatientAppointmentInput' } } }
+      responses:
+        '201': { description: Creada, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/SlotUnavailable' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /paciente/appointments/{appointment}:
+    parameters: [{ $ref: '#/components/parameters/IdPath' }]
+    get:
+      tags: [Citas Paciente]
+      summary: Ver una cita propia
+      security: [{ pacienteAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Citas Paciente]
+      summary: Cancelar una cita propia
+      description: Solo cancela citas del propio paciente; una cita ajena responde 404.
+      security: [{ pacienteAuth: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------- PUBLICO ------------------------------
+  /publico/tratamientos:
+    get:
+      tags: [Publico]
+      summary: Catalogo publico de tratamientos
+      description: "Tenant por header X-Clinica. Rate limit por tenant + IP (throttle:publico)."
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/availability:
+    get:
+      tags: [Publico]
+      summary: Disponibilidad publica (para reservar sin login previo)
+      parameters:
+        - { $ref: '#/components/parameters/XClinica' }
+        - { $ref: '#/components/parameters/ProfessionalId' }
+        - { $ref: '#/components/parameters/TreatmentId' }
+        - { $ref: '#/components/parameters/Fecha' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AvailabilityResponse' } } } }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # --------------------------- DOCUMENTACION ----------------------------
+  /openapi.yaml:
+    get:
+      tags: [Documentacion]
+      summary: Contrato OpenAPI crudo (este archivo)
+      responses:
+        '200': { description: OK }
+
+components:
+  securitySchemes:
+    staffAuth:
+      type: http
+      scheme: bearer
+      description: Token Sanctum con ability 'staff'.
+    pacienteAuth:
+      type: http
+      scheme: bearer
+      description: Token Sanctum con ability 'paciente'.
+
+  parameters:
+    IdPath:
+      name: professional
+      in: path
+      required: true
+      description: ID del recurso (nombre real varia por ruta).
+      schema: { type: integer }
+    PerPage:
+      name: per_page
+      in: query
+      required: false
+      schema: { type: integer, default: 15 }
+    ProfessionalId:
+      name: professional_id
+      in: query
+      required: true
+      schema: { type: integer }
+    TreatmentId:
+      name: treatment_id
+      in: query
+      required: true
+      schema: { type: integer }
+    Fecha:
+      name: fecha
+      in: query
+      required: true
+      schema: { type: string, format: date, example: "2026-08-20" }
+    XClinica:
+      name: X-Clinica
+      in: header
+      required: true
+      description: Slug de la clinica (tenant) para endpoints publicos.
+      schema: { type: string, example: "clinica-sonrisas" }
+
+  responses:
+    Unauthorized:
+      description: No autenticado o token de otro guard.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Token sin la ability requerida.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Recurso inexistente o de otro tenant.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Error de validacion.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ValidationError' } } }
+    TooManyRequests:
+      description: Rate limit superado.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    SlotUnavailable:
+      description: El slot ya no esta disponible (choque de reserva).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SlotUnavailable' }
+          example: { message: "El horario seleccionado ya no esta disponible. Por favor elige otro.", error: "slot_no_disponible" }
+
+  schemas:
+    StaffRegister:
+      type: object
+      required: [clinica, name, email, password, password_confirmation]
+      properties:
+        clinica: { type: string, description: Slug del tenant }
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        password_confirmation: { type: string }
+    StaffLogin:
+      type: object
+      required: [clinica, email, password]
+      properties:
+        clinica: { type: string }
+        email: { type: string, format: email }
+        password: { type: string }
+    PatientRegister:
+      type: object
+      required: [clinica, nombre, email, password, password_confirmation, fecha_nacimiento]
+      properties:
+        clinica: { type: string }
+        nombre: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        password_confirmation: { type: string }
+        fecha_nacimiento: { type: string, format: date, example: "1990-05-14" }
+    PatientLogin:
+      type: object
+      required: [clinica, email, password]
+      properties:
+        clinica: { type: string }
+        email: { type: string, format: email }
+        password: { type: string }
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        token_type: { type: string, example: Bearer }
+        data: { type: object, description: Usuario autenticado }
+
+    ProfessionalInput:
+      type: object
+      required: [nombre]
+      properties:
+        nombre: { type: string }
+        apellido: { type: string, nullable: true }
+        especialidad: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        activo: { type: boolean }
+        horarios:
+          type: array
+          description: Tramos de atencion. Reemplazan por completo los existentes.
+          items:
+            type: object
+            required: [dia_semana, hora_inicio, hora_fin]
+            properties:
+              dia_semana: { type: integer, minimum: 0, maximum: 6, description: "0=domingo .. 6=sabado" }
+              hora_inicio: { type: string, example: "09:00" }
+              hora_fin: { type: string, example: "13:00" }
+
+    PatientInput:
+      type: object
+      required: [nombre, email, fecha_nacimiento]
+      properties:
+        nombre: { type: string }
+        email: { type: string, format: email }
+        telefono: { type: string, nullable: true }
+        fecha_nacimiento: { type: string, format: date }
+        notas: { type: string, nullable: true }
+        password: { type: string, minLength: 8, nullable: true }
+
+    DiagnosisInput:
+      type: object
+      required: [fecha, descripcion]
+      properties:
+        professional_id: { type: integer, nullable: true }
+        fecha: { type: string, format: date }
+        descripcion: { type: string }
+        notas: { type: string, nullable: true }
+
+    TreatmentInput:
+      type: object
+      required: [nombre, precio]
+      properties:
+        nombre: { type: string }
+        descripcion: { type: string, nullable: true }
+        precio: { type: number, minimum: 0 }
+        duracion_minutos: { type: integer, minimum: 5, maximum: 480, default: 30 }
+        es_diferencial: { type: boolean, description: Atencion diferencial / no listada }
+        activo: { type: boolean }
+
+    BudgetInput:
+      type: object
+      required: [patient_id, items]
+      properties:
+        patient_id: { type: integer }
+        estado: { type: string, enum: [borrador, enviado, aceptado, rechazado] }
+        notas: { type: string, nullable: true }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            description: "Linea de catalogo (treatment_id) o libre (nombre + precio_unitario)."
+            properties:
+              treatment_id: { type: integer, nullable: true }
+              nombre: { type: string, nullable: true }
+              precio_unitario: { type: number, minimum: 0, nullable: true }
+              cantidad: { type: integer, minimum: 1, default: 1 }
+    Budget:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id: { type: integer }
+            patient_id: { type: integer }
+            estado: { type: string, enum: [borrador, enviado, aceptado, rechazado] }
+            total: { type: number, description: Calculado por el servidor }
+            items: { type: array, items: { type: object } }
+
+    StaffAppointmentInput:
+      type: object
+      required: [patient_id, professional_id, treatment_id, fecha_hora]
+      properties:
+        patient_id: { type: integer }
+        professional_id: { type: integer }
+        treatment_id: { type: integer }
+        fecha_hora: { type: string, format: date-time, example: "2026-08-20T09:00:00" }
+        notas: { type: string, nullable: true, maxLength: 1000 }
+    PatientAppointmentInput:
+      type: object
+      required: [professional_id, treatment_id, fecha_hora]
+      properties:
+        professional_id: { type: integer }
+        treatment_id: { type: integer }
+        fecha_hora: { type: string, format: date-time, example: "2026-08-20T09:00:00" }
+        notas: { type: string, nullable: true, maxLength: 1000 }
+    Appointment:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id: { type: integer }
+            professional_id: { type: integer }
+            patient_id: { type: integer }
+            treatment_id: { type: integer }
+            fecha_hora: { type: string, format: date-time }
+            fecha_hora_fin: { type: string, format: date-time }
+            duracion_minutos: { type: integer }
+            estado: { type: string, enum: [reservada, confirmada, cancelada, completada] }
+            notas: { type: string, nullable: true }
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            professional_id: { type: integer }
+            treatment_id: { type: integer }
+            fecha: { type: string, format: date }
+            duracion_minutos: { type: integer }
+            slots:
+              type: array
+              items:
+                type: object
+                properties:
+                  inicio: { type: string, example: "09:00" }
+                  fin: { type: string, example: "10:00" }
+                  fecha_hora: { type: string, format: date-time }
+
+    PaginatedList:
+      type: object
+      properties:
+        data: { type: array, items: { type: object } }
+        meta:
+          type: object
+          properties:
+            current_page: { type: integer }
+            from: { type: integer, nullable: true }
+            to: { type: integer, nullable: true }
+            per_page: { type: integer }
+            last_page: { type: integer }
+            total: { type: integer }
+        links:
+          type: object
+          properties:
+            first: { type: string, nullable: true }
+            last: { type: string, nullable: true }
+            prev: { type: string, nullable: true }
+            next: { type: string, nullable: true }
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+    SlotUnavailable:
+      type: object
+      properties:
+        message: { type: string }
+        error: { type: string, example: slot_no_disponible }
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
