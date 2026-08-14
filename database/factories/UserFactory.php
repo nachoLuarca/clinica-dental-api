@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Auth\RoleProvisioner;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -43,5 +44,28 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * Por defecto el staff de factory queda con rol 'admin': la mayoria de
+     * los tests solo necesitan un staff autenticado que pueda todo. Los tests
+     * que ejercitan permisos especificos usan ->rol('recepcion'|'profesional')
+     * o $user->syncRoles([]) para el caso sin permisos.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            app(RoleProvisioner::class)->asignarRol($user, 'admin');
+        });
+    }
+
+    /**
+     * Crea el staff con un rol especifico en vez del 'admin' por defecto.
+     */
+    public function rol(string $rol): static
+    {
+        return $this->afterCreating(function (User $user) use ($rol): void {
+            app(RoleProvisioner::class)->asignarRol($user, $rol);
+        });
     }
 }
