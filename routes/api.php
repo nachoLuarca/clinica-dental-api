@@ -53,16 +53,38 @@ Route::prefix('staff')->group(function () {
         Route::post('logout', [StaffAuthController::class, 'logout']);
 
         // CRUDs base (paso 4). Todos tenant-scoped por el middleware 'tenant'.
+        // Cada accion exige el permiso correspondiente (paso 9, roles/permisos
+        // por tenant via Spatie "teams" = tenant_id); ver README seccion Roles.
         Route::apiResource('professionals', ProfessionalController::class)
-            ->parameters(['professionals' => 'professional']);
+            ->parameters(['professionals' => 'professional'])
+            ->middlewareFor(['index', 'show'], 'permission:professionals.ver,staff')
+            ->middlewareFor('store', 'permission:professionals.crear,staff')
+            ->middlewareFor('update', 'permission:professionals.editar,staff')
+            ->middlewareFor('destroy', 'permission:professionals.eliminar,staff');
         Route::apiResource('patients', PatientController::class)
-            ->parameters(['patients' => 'patient']);
+            ->parameters(['patients' => 'patient'])
+            ->middlewareFor(['index', 'show'], 'permission:patients.ver,staff')
+            ->middlewareFor('store', 'permission:patients.crear,staff')
+            ->middlewareFor('update', 'permission:patients.editar,staff')
+            ->middlewareFor('destroy', 'permission:patients.eliminar,staff');
         Route::apiResource('patients.diagnoses', DiagnosisController::class)
-            ->parameters(['patients' => 'patient', 'diagnoses' => 'diagnosis']);
+            ->parameters(['patients' => 'patient', 'diagnoses' => 'diagnosis'])
+            ->middlewareFor(['index', 'show'], 'permission:diagnoses.ver,staff')
+            ->middlewareFor('store', 'permission:diagnoses.crear,staff')
+            ->middlewareFor('update', 'permission:diagnoses.editar,staff')
+            ->middlewareFor('destroy', 'permission:diagnoses.eliminar,staff');
         Route::apiResource('treatments', TreatmentController::class)
-            ->parameters(['treatments' => 'treatment']);
+            ->parameters(['treatments' => 'treatment'])
+            ->middlewareFor(['index', 'show'], 'permission:treatments.ver,staff')
+            ->middlewareFor('store', 'permission:treatments.crear,staff')
+            ->middlewareFor('update', 'permission:treatments.editar,staff')
+            ->middlewareFor('destroy', 'permission:treatments.eliminar,staff');
         Route::apiResource('budgets', BudgetController::class)
-            ->parameters(['budgets' => 'budget']);
+            ->parameters(['budgets' => 'budget'])
+            ->middlewareFor(['index', 'show'], 'permission:budgets.ver,staff')
+            ->middlewareFor('store', 'permission:budgets.crear,staff')
+            ->middlewareFor('update', 'permission:budgets.editar,staff')
+            ->middlewareFor('destroy', 'permission:budgets.eliminar,staff');
 
         // Disponibilidad y citas (paso 5). El staff reserva para pacientes de su
         // clinica y consulta/cancela las citas del tenant.
@@ -70,7 +92,10 @@ Route::prefix('staff')->group(function () {
             ->middleware('throttle:availability');
         Route::apiResource('appointments', StaffAppointmentController::class)
             ->only(['index', 'store', 'show', 'destroy'])
-            ->parameters(['appointments' => 'appointment']);
+            ->parameters(['appointments' => 'appointment'])
+            ->middlewareFor(['index', 'show'], 'permission:appointments.ver,staff')
+            ->middlewareFor('store', 'permission:appointments.crear,staff')
+            ->middlewareFor('destroy', 'permission:appointments.eliminar,staff');
     });
 });
 

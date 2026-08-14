@@ -24,6 +24,7 @@ class StaffAuthService
     public function __construct(
         private readonly StaffRepositoryInterface $staff,
         private readonly TenantRepositoryInterface $tenants,
+        private readonly RoleProvisioner $roles,
     ) {}
 
     /**
@@ -45,6 +46,11 @@ class StaffAuthService
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
+
+        // Rol por defecto de menor privilegio: el auto-registro es publico
+        // (solo requiere conocer el slug de la clinica), asi que nunca otorga
+        // 'admin' automatico. Elevar a admin/profesional se hace a mano.
+        $this->roles->asignarRol($user, 'recepcion');
 
         return new AuthResult($user, $user->createToken(self::TOKEN_NAME, ['staff'])->plainTextToken);
     }

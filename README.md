@@ -159,6 +159,24 @@ routes/api.php
         -> app/Models       (Eloquent + relaciones + TenantScope)
 ```
 
+## Roles y permisos del staff
+
+`spatie/laravel-permission` con la feature "teams" mapeada a `tenant_id`
+(`config/permission.php`): un rol de una clinica nunca autoriza en otra.
+
+- **admin**: acceso total a los CRUDs del staff.
+- **profesional**: ve todo lo clinico, edita pacientes/diagnosticos, no
+  administra personal ni borra tratamientos/presupuestos.
+- **recepcion**: alta de pacientes y citas, sin acceso a diagnosticos ni
+  a la gestion de profesionales/tratamientos.
+
+Permisos con convencion `recurso.accion` (`ver`/`crear`/`editar`/`eliminar`),
+aplicados por ruta via `middlewareFor` en `routes/api.php`. El auto-registro
+publico de staff (`POST /api/staff/register`) siempre asigna `recepcion`
+(menor privilegio); elevar a `admin`/`profesional` se hace a mano. La matriz
+completa vive en `App\Services\Auth\RoleProvisioner`, que la aprovisiona por
+tenant de forma idempotente.
+
 ## Flujo de trabajo con Git
 
 Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —

@@ -8,6 +8,7 @@ use App\Models\Professional;
 use App\Models\Tenant;
 use App\Models\Treatment;
 use App\Models\User;
+use App\Services\Auth\RoleProvisioner;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -44,7 +45,7 @@ class DatabaseSeeder extends Seeder
         // endpoint de registro: no lo tocamos si ya esta, solo lo creamos si
         // falta, para no pisar una password distinta que el usuario haya
         // puesto en la practica.
-        User::firstOrCreate(
+        $staff = User::firstOrCreate(
             ['tenant_id' => $tenant->id, 'email' => 'staff@demo.cl'],
             [
                 'name' => 'Staff Demo',
@@ -52,6 +53,11 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // El auto-registro publico siempre asigna 'recepcion' (menor
+        // privilegio); el staff de demo se eleva a 'admin' a mano aca para
+        // poder probar el sistema completo sin pasos manuales.
+        app(RoleProvisioner::class)->asignarRol($staff, 'admin');
 
         $profesionalUno = Professional::firstOrCreate(
             ['tenant_id' => $tenant->id, 'email' => 'maria.gonzalez@clinica-demo.cl'],
