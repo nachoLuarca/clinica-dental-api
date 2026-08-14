@@ -8,7 +8,7 @@
       },
       "container_name": "clinica_dental_api",
       "restart": "unless-stopped",
-      "ports": ["8080:8000"],
+      "ports": ["8081:8000"],
       "volumes": ["../:/var/www/html"],
       "env_file": ["../.env"],
       "depends_on": ["db", "redis", "whatsapp"],

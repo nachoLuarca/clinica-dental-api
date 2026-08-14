@@ -34,7 +34,7 @@ Todo lo de contenedores vive en `docker/`. El compose levanta:
 
 | Servicio    | Contenedor                 | Rol                                              | Puerto host |
 |-------------|----------------------------|--------------------------------------------------|-------------|
-| `api`       | `clinica_dental_api`       | Laravel (`php artisan serve`)                     | **8080** -> 8000 |
+| `api`       | `clinica_dental_api`       | Laravel (`php artisan serve`)                     | **8081** -> 8000 |
 | `db`        | `clinica_dental_db`        | PostgreSQL 16                                    | **5433** -> 5432 |
 | `redis`     | `clinica_dental_redis`     | Cache de disponibilidad + colas                 | 6379        |
 | `mailpit`   | `clinica_dental_mailpit`   | Captura de correos en dev (UI web)              | **8026** -> 8025 (SMTP 1026 -> 1025) |
@@ -42,7 +42,7 @@ Todo lo de contenedores vive en `docker/`. El compose levanta:
 | `scheduler` | `clinica_dental_scheduler` | `schedule:work` (dispara recordatorios)         | —           |
 | `whatsapp`  | `clinica_dental_whatsapp`  | Microservicio Node (Baileys) para WhatsApp      | 3001 -> 3000 |
 
-> Los puertos del host estan remapeados (8080 / 5433 / 8026) para no chocar con
+> Los puertos del host estan remapeados (8081 / 5433 / 8026) para no chocar con
 > otros proyectos que puedas tener corriendo en los puertos por defecto.
 
 ## Levantar el proyecto
@@ -62,8 +62,8 @@ docker compose -f docker/docker-compose.json up -d --build
 docker compose -f docker/docker-compose.json exec api php artisan migrate --force
 ```
 
-La API queda en `http://localhost:8080/api`.
-Health check: `http://localhost:8080/up`.
+La API queda en `http://localhost:8081/api`.
+Health check: `http://localhost:8081/up`.
 
 ### Comandos utiles
 
@@ -102,8 +102,8 @@ guards de auth (incluyendo abilities).
 El contrato se mantiene a mano en `resources/openapi/openapi.yaml` (fuente unica
 de verdad, importable por ambos frontends para generar clientes/tipos):
 
-- **UI interactiva (Swagger UI)**: `http://localhost:8080/api/documentation`
-- **Contrato crudo**: `http://localhost:8080/api/openapi.yaml`
+- **UI interactiva (Swagger UI)**: `http://localhost:8081/api/documentation`
+- **Contrato crudo**: `http://localhost:8081/api/openapi.yaml`
 
 Cubre todos los dominios (auth staff/paciente, profesionales+horarios,
 pacientes+diagnostico, tratamientos, presupuestos, disponibilidad, citas y
