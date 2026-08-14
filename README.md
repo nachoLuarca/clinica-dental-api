@@ -65,6 +65,17 @@ docker compose -f docker/docker-compose.json exec api php artisan migrate --forc
 La API queda en `http://localhost:8081/api`.
 Health check: `http://localhost:8081/up`.
 
+### Datos de prueba
+
+`php artisan db:seed` deja una clinica y staff de prueba listos para probar
+el sistema sin pasos manuales (clinica `slug: clinica-demo`, staff
+`staff@demo.cl` / `password123`). Es idempotente, se puede correr varias
+veces sin duplicar datos.
+
+```bash
+docker compose -f docker/docker-compose.json exec api php artisan db:seed
+```
+
 ### Comandos utiles
 
 ```bash
