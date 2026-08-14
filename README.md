@@ -159,6 +159,20 @@ routes/api.php
         -> app/Models       (Eloquent + relaciones + TenantScope)
 ```
 
+## Flujo de trabajo con Git
+
+Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —
+Google, Meta, research de DORA/Accelerate — no un atajo).
+
+- **Cambios chicos**: commit directo a `main`.
+- **Cambios grandes o riesgosos**: rama de vida corta (`feature/*` o `fix/*`)
+  -> `git merge --no-ff` a `main` (sin PR), y se borra la rama despues.
+- **No negociable**: tests en verde antes de cada commit/merge a `main` — es la
+  red de seguridad que reemplaza al code review.
+- Mensajes en [Conventional Commits](https://www.conventionalcommits.org/),
+  chicos y atomicos.
+- Sin `--force` a `main`. Sin atribucion a IA en los commits.
+
 ## Variables de entorno
 
 Todo se configura por `.env` (ver `.env.example` documentado). Nada de secretos
