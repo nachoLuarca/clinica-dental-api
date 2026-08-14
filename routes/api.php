@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AvailabilityController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
@@ -27,6 +28,12 @@ use Illuminate\Support\Facades\Route;
 | partir del usuario ya autenticado (nunca de input del cliente).
 |
 */
+
+// --- DOCUMENTACION (OpenAPI / Swagger UI) ---
+// Publica y sin tenant: es el contrato de referencia para ambos frontends.
+// /api/documentation carga la UI; /api/openapi.yaml expone el contrato crudo.
+Route::get('documentation', [DocsController::class, 'ui']);
+Route::get('openapi.yaml', [DocsController::class, 'spec']);
 
 // --- PUBLICO (sitio de pacientes, sin login) ---
 // El tenant se resuelve por el slug de clinica del header 'X-Clinica'

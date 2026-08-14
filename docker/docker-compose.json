@@ -14,6 +14,34 @@
       "depends_on": ["db", "redis", "whatsapp"],
       "networks": ["clinica_dental_net"]
     },
+    "worker": {
+      "build": {
+        "context": "..",
+        "dockerfile": "docker/Dockerfile"
+      },
+      "container_name": "clinica_dental_worker",
+      "restart": "unless-stopped",
+      "volumes": ["../:/var/www/html"],
+      "env_file": ["../.env"],
+      "depends_on": ["db", "redis", "whatsapp"],
+      "networks": ["clinica_dental_net"],
+      "entrypoint": [],
+      "command": ["php", "artisan", "queue:work", "--queue=notificaciones,recordatorios", "--tries=3", "--backoff=10", "--sleep=3", "--max-time=3600"]
+    },
+    "scheduler": {
+      "build": {
+        "context": "..",
+        "dockerfile": "docker/Dockerfile"
+      },
+      "container_name": "clinica_dental_scheduler",
+      "restart": "unless-stopped",
+      "volumes": ["../:/var/www/html"],
+      "env_file": ["../.env"],
+      "depends_on": ["db", "redis"],
+      "networks": ["clinica_dental_net"],
+      "entrypoint": [],
+      "command": ["php", "artisan", "schedule:work"]
+    },
     "whatsapp": {
       "build": {
         "context": "../whatsapp-service",

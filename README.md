@@ -1,58 +1,169 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Clinica Dental API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend unico (Laravel 13 / PHP 8.4) del SaaS multi-tenant para clinicas
+dentales. Una sola API sirve a dos frontends que viven en repos aparte y
+corren en local (no se dockerizan):
 
-## About Laravel
+- `clinica-dental-portal` — portal de gestion del staff de la clinica.
+- `clinica-dental-paciente` — sitio publico + reservas de pacientes.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Ninguna logica de negocio vive en los clientes: todo pasa por esta API.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Caracteristicas
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Multi-tenant** por columna `tenant_id` + global scope. El `tenant_id` nunca
+  se recibe del cliente: se resuelve del usuario autenticado o del header
+  `X-Clinica` en endpoints publicos.
+- **Arquitectura por capas**: Controllers -> Servicios -> Repositorios -> Models
+  Eloquent. El controller nunca toca Eloquent directo.
+- **Dos guards de auth** independientes (Sanctum con abilities): `staff` y
+  `paciente`. Un token de un guard no autoriza endpoints del otro.
+- **Reservas con bloqueo optimista**: constraint unico parcial
+  (`professional_id` + `fecha_hora` en citas no canceladas). Si el slot se
+  ocupo, responde 409 `slot_no_disponible`.
+- **Disponibilidad cacheada en Redis**, invalidada por evento (crear/cancelar
+  cita), no por TTL.
+- **Notificaciones best-effort y encoladas** (correo + WhatsApp) en colas
+  separadas de los recordatorios; un fallo de notificacion nunca tumba la cita.
+- **Seguridad**: CORS acotado a los dominios de los frontends, rate limiting en
+  login/registro/publicos, headers de seguridad, Form Requests en todo input.
 
-## Learning Laravel
+## Stack e infraestructura (Docker)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Todo lo de contenedores vive en `docker/`. El compose levanta:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Servicio    | Contenedor                 | Rol                                              | Puerto host |
+|-------------|----------------------------|--------------------------------------------------|-------------|
+| `api`       | `clinica_dental_api`       | Laravel (`php artisan serve`)                     | **8080** -> 8000 |
+| `db`        | `clinica_dental_db`        | PostgreSQL 16                                    | **5433** -> 5432 |
+| `redis`     | `clinica_dental_redis`     | Cache de disponibilidad + colas                 | 6379        |
+| `mailpit`   | `clinica_dental_mailpit`   | Captura de correos en dev (UI web)              | **8026** -> 8025 (SMTP 1026 -> 1025) |
+| `worker`    | `clinica_dental_worker`    | `queue:work --queue=notificaciones,recordatorios`| —           |
+| `scheduler` | `clinica_dental_scheduler` | `schedule:work` (dispara recordatorios)         | —           |
+| `whatsapp`  | `clinica_dental_whatsapp`  | Microservicio Node (Baileys) para WhatsApp      | 3001 -> 3000 |
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+> Los puertos del host estan remapeados (8080 / 5433 / 8026) para no chocar con
+> otros proyectos que puedas tener corriendo en los puertos por defecto.
 
-## Agentic Development
+## Levantar el proyecto
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Requisitos: Docker Desktop.
 
 ```bash
-composer require laravel/boost --dev
+# 1. Copiar el .env (ajusta si hace falta; los defaults ya apuntan a los servicios)
+cp .env.example .env
 
-php artisan boost:install
+# 2. Construir y levantar los 7 servicios
+docker compose -f docker/docker-compose.json up -d --build
+
+# 3. (Primer arranque) el entrypoint del api espera a Postgres, corre
+#    'composer install' si falta vendor/, genera APP_KEY y migra automaticamente.
+#    Si necesitas forzarlo a mano:
+docker compose -f docker/docker-compose.json exec api php artisan migrate --force
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+La API queda en `http://localhost:8080/api`.
+Health check: `http://localhost:8080/up`.
 
-## Contributing
+### Comandos utiles
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+# Ver estado de los contenedores
+docker compose -f docker/docker-compose.json ps
 
-## Code of Conduct
+# Logs del worker de colas / scheduler
+docker compose -f docker/docker-compose.json logs -f worker
+docker compose -f docker/docker-compose.json logs -f scheduler
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Migraciones
+docker compose -f docker/docker-compose.json exec api php artisan migrate
+docker compose -f docker/docker-compose.json exec api php artisan migrate:fresh --seed
 
-## Security Vulnerabilities
+# Bajar todo
+docker compose -f docker/docker-compose.json down
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
 
-## License
+Los tests corren dentro del contenedor `api` (usan la config de `.env.testing`):
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+docker compose -f docker/docker-compose.json exec api php artisan test
+# o mas compacto
+docker compose -f docker/docker-compose.json exec api php artisan test --compact
+```
+
+La suite cubre, entre otros, los tres puntos criticos de la arquitectura:
+aislamiento multi-tenant, bloqueo optimista de reservas y separacion de los dos
+guards de auth (incluyendo abilities).
+
+## Documentacion de la API (Swagger / OpenAPI)
+
+El contrato se mantiene a mano en `resources/openapi/openapi.yaml` (fuente unica
+de verdad, importable por ambos frontends para generar clientes/tipos):
+
+- **UI interactiva (Swagger UI)**: `http://localhost:8080/api/documentation`
+- **Contrato crudo**: `http://localhost:8080/api/openapi.yaml`
+
+Cubre todos los dominios (auth staff/paciente, profesionales+horarios,
+pacientes+diagnostico, tratamientos, presupuestos, disponibilidad, citas y
+endpoints publicos) con sus esquemas y codigos de error (401, 403, 404, 409
+`slot_no_disponible`, 422, 429).
+
+## Ver los correos (Mailpit)
+
+En desarrollo el mailer apunta a Mailpit (sin salir a internet, sin auth).
+Los correos que la app envie se ven en:
+
+`http://localhost:8026`
+
+Para produccion con Brevo: poner `MAIL_MAILER=brevo` y las credenciales SMTP de
+Brevo en `.env` (ver bloque comentado en `.env.example`).
+
+## WhatsApp real (Baileys)
+
+El microservicio `whatsapp` (Node + Baileys) corre aparte del proceso PHP. En
+dev arranca en modo mock (`WHATSAPP_MOCK=true`), asi que no requiere una sesion
+real y no envia nada.
+
+Para conectar un numero real:
+
+1. Poner `WHATSAPP_MOCK=false` en `.env` y definir `WHATSAPP_SERVICE_TOKEN`.
+2. Reiniciar el servicio: `docker compose -f docker/docker-compose.json up -d whatsapp`
+3. Ver el log del contenedor para escanear el QR con WhatsApp del telefono:
+   `docker compose -f docker/docker-compose.json logs -f whatsapp`
+4. La sesion se persiste en el volumen `clinica_dental_whatsapp_auth`.
+
+> Baileys es una libreria **no oficial**: usa la sesion de un numero normal.
+> Aceptable para pruebas; para produccion con clinicas pagando habria que migrar
+> a la Meta Cloud API. Si WhatsApp falla, el correo igual sale (best-effort).
+
+## Estructura de capas
+
+```
+routes/api.php
+  -> app/Http/Controllers (orquestan, validan via Form Requests)
+    -> app/Services         (reglas de negocio)
+      -> app/Repositories   (unico acceso a datos)
+        -> app/Models       (Eloquent + relaciones + TenantScope)
+```
+
+## Variables de entorno
+
+Todo se configura por `.env` (ver `.env.example` documentado). Nada de secretos
+en codigo. Claves principales:
+
+- `DB_*`, `REDIS_*`, `MAIL_*` — infraestructura.
+- `CORS_ALLOWED_ORIGINS` — dominios de los dos frontends (nunca `*`).
+- `TENANT_PUBLIC_HEADER` — header del tenant publico (`X-Clinica`).
+- `RATE_LIMIT_*` — limites de rate limiting, ajustables sin tocar codigo.
+- `NOTIFICACIONES_*`, `COLA_*`, `RECORDATORIO_*` — canales, colas y ventana de
+  recordatorios.
+- `WHATSAPP_*`, `BREVO_*` — proveedores de notificacion.
+
+## Pendiente / fuera de alcance
+
+- **Pago de la reserva**: fuera de alcance por decision de producto.
+- **WhatsApp**: Baileys es no oficial; migrar a Meta Cloud API para produccion.
+- **Tenant publico por header**: `X-Clinica` es simple para dev; en produccion
+  podria resolverse por subdominio de la clinica.
