@@ -47,7 +47,14 @@ class RolesYPermisosTest extends TestCase
 
         $this->withToken($token)
             ->deleteJson("/api/staff/professionals/{$professional->id}")
-            ->assertForbidden();
+            ->assertForbidden()
+            // Sin interceptar la excepcion de Spatie, esto respondia en ingles
+            // ("User does not have the right permissions") y con un stack
+            // trace completo filtrado en el body (APP_DEBUG=true en dev).
+            ->assertExactJson([
+                'message' => 'No tenes permiso para realizar esta accion.',
+                'error' => 'permiso_denegado',
+            ]);
     }
 
     public function test_recepcion_si_puede_listar_pacientes(): void

@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,4 +40,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Spatie lanza esta excepcion en ingles y sin el shape {message, error}
+        // del resto de la API; ademas, sin interceptarla, con APP_DEBUG=true
+        // (modo prueba de este proyecto) se filtra un stack trace completo de
+        // ~150 lineas en la respuesta 403.
+        $exceptions->render(fn (UnauthorizedException $e, Request $request) => response()->json([
+            'message' => 'No tenes permiso para realizar esta accion.',
+            'error' => 'permiso_denegado',
+        ], 403));
     })->create();
