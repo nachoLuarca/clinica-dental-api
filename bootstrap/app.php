@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -36,6 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
+
+        // Esta es una API pura (sin rutas 'web' de login): por defecto, un
+        // request sin token que NO manda 'Accept: application/json' hace que
+        // el middleware Authenticate intente armar un redirect a la ruta
+        // 'login' -que no existe- y explota con 500 RouteNotFoundException
+        // en vez de devolver un 401 limpio. Se anula el redirect (null
+        // siempre) para que nunca dependa de que el cliente mande ese header.
+        Authenticate::redirectUsing(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -61,4 +71,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'message' => 'El recurso solicitado no existe.',
             'error' => 'no_encontrado',
         ], 404));
+
+        // Mismo shape {message, error} en espanol que el resto de los errores
+        // esperados de la API (sin esto, el default de Laravel es en ingles:
+        // "Unauthenticated.").
+        $exceptions->render(fn (AuthenticationException $e, Request $request) => response()->json([
+            'message' => 'No estas autenticado. Inicia sesion para continuar.',
+            'error' => 'no_autenticado',
+        ], 401));
     })->create();
