@@ -172,10 +172,42 @@ routes/api.php
 
 Permisos con convencion `recurso.accion` (`ver`/`crear`/`editar`/`eliminar`),
 aplicados por ruta via `middlewareFor` en `routes/api.php`. El auto-registro
-publico de staff (`POST /api/staff/register`) siempre asigna `recepcion`
-(menor privilegio); elevar a `admin`/`profesional` se hace a mano. La matriz
-completa vive en `App\Services\Auth\RoleProvisioner`, que la aprovisiona por
-tenant de forma idempotente.
+publico de staff (`POST /api/staff/register`) **no asigna ningun rol**: como
+los roles son editables (ver abajo), no hay ninguno "seguro" que asumir de
+antemano (hasta `recepcion` se puede renombrar o borrar). Un admin de la
+clinica asigna el rol despues via `PATCH /api/staff/users/{id}/rol`. La
+matriz base vive en `App\Services\Auth\RoleProvisioner`, que la aprovisiona
+por tenant de forma idempotente (solo la primera vez que se crea cada rol;
+`admin` se resincroniza siempre porque esta protegido y nadie lo edita a mano).
+
+### Gestion de usuarios, roles y permisos (`admin` unicamente)
+
+Los 3 roles de base son solo un punto de partida: `admin` puede crear sus
+propios roles y armar la matriz de permisos a medida, similar a `col_api`.
+
+- `GET/POST /api/staff/roles`, `GET/PUT/DELETE /api/staff/roles/{id}`,
+  `PATCH /api/staff/roles/{id}/permisos` — CRUD de roles y su matriz.
+- `GET /api/staff/permisos` — catalogo de permisos agrupado por recurso
+  (alimenta el formulario de creacion/edicion de roles del frontend).
+- `GET/POST /api/staff/users`, `GET/PUT /api/staff/users/{id}`,
+  `PATCH /api/staff/users/{id}/rol`, `PATCH /api/staff/users/{id}/estado`,
+  `PATCH /api/staff/users/{id}/password` — alta, edicion, cambio de rol,
+  activar/desactivar (soft, columna `activo`; un staff desactivado no puede
+  loguear y pierde sus sesiones) y reseteo de password del staff.
+
+**Salvaguardas** (`App\Exceptions\RolProtegidoException` / `UltimoAdminException`
+/ `OperacionSobreSiMismoException`):
+
+- El rol `admin` (`RoleProvisioner::ROL_PROTEGIDO`) nunca se puede renombrar,
+  editarle los permisos ni borrarlo.
+- Nunca se puede dejar la clinica sin ningun staff activo capaz de gestionar
+  roles/usuarios (permiso `roles.editar`, `RoleProvisioner::PERMISO_GESTION`):
+  ni desactivando al ultimo admin, ni quitandole ese permiso al ultimo rol
+  que lo tiene.
+- Un staff no puede desactivarse a si mismo ni quitarse a si mismo el rol/
+  permiso de gestion (evita bloquearse por accidente).
+- Un rol no se puede borrar si todavia tiene staff asignado (hay que
+  reasignarlos primero).
 
 ## Marca de la clinica
 

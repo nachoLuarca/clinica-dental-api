@@ -68,7 +68,7 @@ class RolesYPermisosTest extends TestCase
             ->assertOk();
     }
 
-    public function test_registro_publico_asigna_rol_recepcion_no_admin(): void
+    public function test_registro_publico_no_asigna_ningun_rol(): void
     {
         $tenant = Tenant::factory()->create(['slug' => 'clinica-registro-test']);
 
@@ -78,15 +78,17 @@ class RolesYPermisosTest extends TestCase
             'email' => 'nuevo@clinica-registro-test.cl',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-        ])->assertCreated();
+        ])->assertCreated()->assertJsonPath('data.roles', []);
 
         $token = $response->json('token');
         $professional = Professional::factory()->create(['tenant_id' => $tenant->id]);
 
-        // 'recepcion' no tiene professionals.eliminar: el auto-registro publico
-        // nunca debe otorgar privilegios de admin por default.
+        // Sin rol asignado (paso 10, roles editables: no hay ninguno "seguro"
+        // que asumir de antemano), el auto-registro publico nunca otorga
+        // ningun permiso por default. Un admin de la clinica asigna el rol
+        // despues via PATCH /users/{id}/rol.
         $this->withToken($token)
-            ->deleteJson("/api/staff/professionals/{$professional->id}")
+            ->getJson('/api/staff/professionals')
             ->assertForbidden();
     }
 

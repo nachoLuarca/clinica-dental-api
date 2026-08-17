@@ -24,11 +24,20 @@ class RoleProvisioner
     private const GUARD = 'staff';
 
     /**
+     * El permiso que protege a la clinica de quedarse sin nadie que pueda
+     * gestionar roles/usuarios (equivalente al "super-admin" de col_api).
+     */
+    public const PERMISO_GESTION = 'roles.editar';
+
+    /** Rol que nunca se puede renombrar ni borrar (siempre tiene PERMISO_GESTION). */
+    public const ROL_PROTEGIDO = 'admin';
+
+    /**
      * @return array<string, list<string>>
      */
     public static function matriz(): array
     {
-        $recursos = ['professionals', 'patients', 'diagnoses', 'treatments', 'budgets', 'appointments'];
+        $recursos = ['professionals', 'patients', 'diagnoses', 'treatments', 'budgets', 'appointments', 'roles', 'usuarios'];
         $permisos = [];
 
         foreach ($recursos as $recurso) {
@@ -102,7 +111,18 @@ class RoleProvisioner
                     'guard_name' => self::GUARD,
                     'tenant_id' => $tenant->id,
                 ]);
-                $role->syncPermissions($permisos);
+
+                // El rol protegido ('admin') SIEMPRE se resincroniza contra la
+                // matriz completa: nadie lo puede editar a mano (ver
+                // RoleManagementService), asi que forzarlo es seguro y
+                // autocura clinicas viejas cuando se agregan permisos nuevos
+                // al catalogo (como paso ahora con roles.*/usuarios.*). Los
+                // demas roles solo se sincronizan la PRIMERA vez que se crean:
+                // son editables (paso 10), y resincronizar siempre pisaria lo
+                // que un admin haya customizado en 'profesional'/'recepcion'.
+                if ($role->wasRecentlyCreated || $rol === self::ROL_PROTEGIDO) {
+                    $role->syncPermissions($permisos);
+                }
             }
 
             $registrar->forgetCachedPermissions();

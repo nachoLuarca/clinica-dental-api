@@ -47,10 +47,14 @@ class StaffAuthService
             'password' => Hash::make($data['password']),
         ]);
 
-        // Rol por defecto de menor privilegio: el auto-registro es publico
-        // (solo requiere conocer el slug de la clinica), asi que nunca otorga
-        // 'admin' automatico. Elevar a admin/profesional se hace a mano.
-        $this->roles->asignarRol($user, 'recepcion');
+        // El auto-registro es publico (solo requiere conocer el slug de la
+        // clinica), asi que NUNCA asigna un rol solo: los roles ahora los
+        // administra el 'admin' de la clinica (paso 10, roles editables), y
+        // no hay ninguno "seguro" que asumir de antemano porque hasta el
+        // 'recepcion' de base se puede renombrar o borrar. Solo se garantiza
+        // que la matriz base de la clinica exista para que el admin tenga
+        // algo de donde partir.
+        $this->roles->provisionarTenant($tenant);
 
         return new AuthResult($user, $user->createToken(self::TOKEN_NAME, ['staff'])->plainTextToken);
     }
@@ -67,6 +71,12 @@ class StaffAuthService
         if ($user === null || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales no coinciden con nuestros registros.'],
+            ]);
+        }
+
+        if (! $user->activo) {
+            throw ValidationException::withMessages([
+                'email' => ['Esta cuenta esta desactivada. Contacta a un administrador de la clinica.'],
             ]);
         }
 
