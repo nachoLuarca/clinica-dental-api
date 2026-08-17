@@ -6,6 +6,8 @@ use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
+use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
+use App\Http\Controllers\Publico\TenantController as PublicoTenantController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
@@ -45,6 +47,14 @@ Route::get('openapi.yaml', [DocsController::class, 'spec']);
 Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->group(function () {
     Route::get('tratamientos', [CatalogController::class, 'index']);
     Route::get('availability', [AvailabilityController::class, 'index']);
+
+    // Marca de la clinica (nombre/logo/color) para el sitio publico.
+    Route::get('tenant', [PublicoTenantController::class, 'show']);
+
+    // Gestion de citas SIN login: el paciente se identifica con RUT + fecha
+    // de nacimiento (ver PatientLookupService) en vez de un token Sanctum.
+    Route::get('citas', [PublicoPatientAppointmentController::class, 'index']);
+    Route::delete('citas/{appointment}', [PublicoPatientAppointmentController::class, 'destroy']);
 });
 
 // --- STAFF (portal clinica) ---

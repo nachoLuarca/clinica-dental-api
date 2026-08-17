@@ -9,6 +9,14 @@ interface PatientRepositoryInterface
 {
     public function findByTenantAndEmail(int $tenantId, string $email): ?Patient;
 
+    public function findByTenantAndRut(int $tenantId, string $rut): ?Patient;
+
+    /**
+     * Para el lookup publico sin login: RUT + fecha de nacimiento como
+     * segundo factor (el RUT solo no alcanza, ver Publico\PatientAppointmentLookupController).
+     */
+    public function findByTenantRutAndBirthdate(int $tenantId, string $rut, string $fechaNacimiento): ?Patient;
+
     /**
      * @param  array<string, mixed>  $data
      */

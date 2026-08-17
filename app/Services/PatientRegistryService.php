@@ -49,6 +49,11 @@ class PatientRegistryService
     {
         $this->assertEmailUnique($data['email']);
 
+        if (! empty($data['rut'])) {
+            $data['rut'] = Patient::normalizarRut($data['rut']);
+            $this->assertRutUnico($data['rut']);
+        }
+
         return $this->patients->create($this->prepare($data));
     }
 
@@ -61,6 +66,13 @@ class PatientRegistryService
 
         if (isset($data['email']) && $data['email'] !== $patient->email) {
             $this->assertEmailUnique($data['email']);
+        }
+
+        if (! empty($data['rut'])) {
+            $data['rut'] = Patient::normalizarRut($data['rut']);
+            if ($data['rut'] !== $patient->rut) {
+                $this->assertRutUnico($data['rut']);
+            }
         }
 
         return $this->patients->update($patient, $this->prepare($data));
@@ -98,6 +110,17 @@ class PatientRegistryService
         if ($tenantId !== null && $this->patients->findByTenantAndEmail($tenantId, $email) !== null) {
             throw ValidationException::withMessages([
                 'email' => ['Ya existe un paciente con este correo en la clinica.'],
+            ]);
+        }
+    }
+
+    private function assertRutUnico(string $rut): void
+    {
+        $tenantId = $this->tenant->tenantId();
+
+        if ($tenantId !== null && $this->patients->findByTenantAndRut($tenantId, $rut) !== null) {
+            throw ValidationException::withMessages([
+                'rut' => ['Ya existe un paciente con este RUT en la clinica.'],
             ]);
         }
     }

@@ -222,6 +222,32 @@ la respuesta incluye `logo_url` ya resuelta. Como Laravel no parsea `PATCH`
 con body `multipart/form-data`, la subida de logo requiere method spoofing:
 `POST` con campo `_method=PATCH`.
 
+`GET /api/publico/tenant` expone la misma marca (`nombre`, `logo_url`,
+`color_primario`, sin `slug` ni `activo`) para el sitio publico de pacientes,
+sin login: tenant resuelto por `X-Clinica` igual que el resto de `/publico`.
+
+## Sitio publico de pacientes: gestion de citas sin login (RUT)
+
+Los pacientes tienen una columna `rut` (unica por tenant, normalizada al
+guardar -sin puntos, digito verificador en mayuscula- via un mutator en el
+modelo `Patient`, asi que da lo mismo si se escribe `12.345.678-9` o
+`12345678-9`). Es **requerida** en el auto-registro (`POST /api/paciente/register`)
+y opcional en el alta que hace el staff.
+
+Con eso, el sitio publico puede listar y cancelar las citas de un paciente
+**sin login**:
+
+- `GET /api/publico/citas` — lista paginada, filtra por `rut` + `fecha_nacimiento`.
+- `DELETE /api/publico/citas/{id}` — cancela, mismos `rut` + `fecha_nacimiento`
+  (como query params o body JSON).
+
+Igual que el resto de `/publico`, el tenant sale del header `X-Clinica` y las
+rutas tienen `throttle:publico` (rate limit por tenant + IP). El RUT solo es
+un dato bastante adivinable/conocido, por eso el lookup exige **RUT + fecha
+de nacimiento juntos** (`App\Services\Publico\PatientLookupService`) — un RUT
+correcto con la fecha equivocada da el mismo error generico que un RUT
+inexistente, para no habilitar enumeracion de pacientes.
+
 ## Flujo de trabajo con Git
 
 Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —

@@ -23,6 +23,25 @@ class PatientRepository implements PatientRepositoryInterface
             ->first();
     }
 
+    public function findByTenantAndRut(int $tenantId, string $rut): ?Patient
+    {
+        return Patient::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', $tenantId)
+            ->where('rut', $rut)
+            ->first();
+    }
+
+    public function findByTenantRutAndBirthdate(int $tenantId, string $rut, string $fechaNacimiento): ?Patient
+    {
+        return Patient::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', $tenantId)
+            ->where('rut', $rut)
+            ->whereDate('fecha_nacimiento', $fechaNacimiento)
+            ->first();
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */

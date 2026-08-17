@@ -18,6 +18,7 @@ class PatientUpdateRequest extends FormRequest
     {
         return [
             'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'rut' => ['nullable', 'string', 'max:20', 'regex:/^\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]$/'],
             'email' => ['sometimes', 'required', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:50'],
             'fecha_nacimiento' => ['sometimes', 'required', 'date'],
