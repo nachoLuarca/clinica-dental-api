@@ -11,6 +11,7 @@ use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
 use App\Http\Controllers\Staff\PatientController;
 use App\Http\Controllers\Staff\ProfessionalController;
+use App\Http\Controllers\Staff\TenantController;
 use App\Http\Controllers\Staff\TreatmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +52,17 @@ Route::prefix('staff')->group(function () {
     Route::middleware(['auth:staff', 'abilities:staff', 'tenant'])->group(function () {
         Route::get('me', [StaffAuthController::class, 'me']);
         Route::post('logout', [StaffAuthController::class, 'logout']);
+
+        // Datos de marca de la propia clinica (nombre/logo/color). Sin
+        // {tenant} en la ruta: siempre es la del usuario autenticado. 'ver'
+        // lo tienen los 3 roles (la UI necesita mostrar nombre/logo siempre);
+        // 'editar' es solo de 'admin'. Subida de logo: el front debe mandar
+        // POST multipart con '_method=PATCH' (Laravel no parsea PATCH
+        // multipart nativo).
+        Route::get('tenant', [TenantController::class, 'show'])
+            ->middleware('permission:tenant.ver,staff');
+        Route::patch('tenant', [TenantController::class, 'update'])
+            ->middleware('permission:tenant.editar,staff');
 
         // CRUDs base (paso 4). Todos tenant-scoped por el middleware 'tenant'.
         // Cada accion exige el permiso correspondiente (paso 9, roles/permisos

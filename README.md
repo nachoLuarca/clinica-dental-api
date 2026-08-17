@@ -177,6 +177,19 @@ publico de staff (`POST /api/staff/register`) siempre asigna `recepcion`
 completa vive en `App\Services\Auth\RoleProvisioner`, que la aprovisiona por
 tenant de forma idempotente.
 
+## Marca de la clinica
+
+`GET/PATCH /api/staff/tenant` — nombre, logo y color de la propia clinica.
+Sin `{tenant}` en la ruta: siempre es la del usuario autenticado, nunca un id
+que mande el cliente. `ver` lo tienen los 3 roles (la UI necesita mostrarlo
+siempre); `editar` es exclusivo de `admin`.
+
+El logo se sube al disco `public` (`storage/app/public/logos`, servido via
+`APP_URL/storage/...` gracias al symlink que crea el entrypoint de Docker) y
+la respuesta incluye `logo_url` ya resuelta. Como Laravel no parsea `PATCH`
+con body `multipart/form-data`, la subida de logo requiere method spoofing:
+`POST` con campo `_method=PATCH`.
+
 ## Flujo de trabajo con Git
 
 Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —

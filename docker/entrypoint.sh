@@ -25,6 +25,12 @@ echo "[entrypoint] PostgreSQL disponible."
 # Corre migraciones (graceful: no rompe si aun no hay tablas nuevas).
 php artisan migrate --force --graceful || true
 
+# Enlaza storage/app/public -> public/storage (logos de clinica y otros
+# archivos subidos por el staff quedan servidos via APP_URL).
+if [ ! -L public/storage ]; then
+  php artisan storage:link || true
+fi
+
 # Limpia y cachea config para reflejar el .env montado.
 php artisan config:clear || true
 

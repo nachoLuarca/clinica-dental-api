@@ -37,6 +37,11 @@ class RoleProvisioner
             }
         }
 
+        // Marca de la clinica (nombre/logo/color): 'ver' para los 3 roles (la
+        // UI lo necesita siempre visible), 'editar' solo para 'admin'.
+        $permisos[] = 'tenant.ver';
+        $permisos[] = 'tenant.editar';
+
         return [
             // Dueno/administrador de la clinica: acceso total.
             'admin' => $permisos,
@@ -50,6 +55,7 @@ class RoleProvisioner
                 'treatments.ver',
                 'budgets.ver',
                 'appointments.ver', 'appointments.eliminar',
+                'tenant.ver',
             ],
 
             // Recepcion/agenda: alta de pacientes y citas, sin acceso clinico
@@ -60,6 +66,7 @@ class RoleProvisioner
                 'treatments.ver',
                 'budgets.ver', 'budgets.crear',
                 'professionals.ver',
+                'tenant.ver',
             ],
         ];
     }
