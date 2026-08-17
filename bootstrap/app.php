@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Spatie\Permission\Exceptions\UnauthorizedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -49,4 +50,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'message' => 'No tenes permiso para realizar esta accion.',
             'error' => 'permiso_denegado',
         ], 403));
+
+        // Sin interceptarla, un 404 "de verdad" (recurso inexistente o de
+        // otro tenant) tambien filtraba un stack trace completo con
+        // APP_DEBUG=true, igual que el UnauthorizedException de arriba. El
+        // Handler de Laravel convierte ModelNotFoundException en
+        // NotFoundHttpException ANTES de llegar a los render() custom, asi
+        // que hay que interceptar esta ultima (no la primera).
+        $exceptions->render(fn (NotFoundHttpException $e, Request $request) => response()->json([
+            'message' => 'El recurso solicitado no existe.',
+            'error' => 'no_encontrado',
+        ], 404));
     })->create();
