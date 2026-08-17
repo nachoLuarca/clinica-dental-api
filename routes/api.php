@@ -10,9 +10,12 @@ use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentControll
 use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
 use App\Http\Controllers\Staff\PatientController;
+use App\Http\Controllers\Staff\PermissionController;
 use App\Http\Controllers\Staff\ProfessionalController;
+use App\Http\Controllers\Staff\RoleController;
 use App\Http\Controllers\Staff\TenantController;
 use App\Http\Controllers\Staff\TreatmentController;
+use App\Http\Controllers\Staff\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -97,6 +100,36 @@ Route::prefix('staff')->group(function () {
             ->middlewareFor('store', 'permission:budgets.crear,staff')
             ->middlewareFor('update', 'permission:budgets.editar,staff')
             ->middlewareFor('destroy', 'permission:budgets.eliminar,staff');
+
+        // Gestion de usuarios/roles/permisos de la propia clinica (paso 10).
+        // Solo 'admin' llega aca (unico rol con usuarios.*/roles.* en la
+        // matriz base); el rol 'admin' mismo esta protegido en el servicio
+        // (RoleProvisioner::ROL_PROTEGIDO): no se puede renombrar, editarle
+        // los permisos ni borrarlo.
+        Route::apiResource('users', UserController::class)
+            ->parameters(['users' => 'user'])
+            ->except(['destroy'])
+            ->middlewareFor(['index', 'show'], 'permission:usuarios.ver,staff')
+            ->middlewareFor('store', 'permission:usuarios.crear,staff')
+            ->middlewareFor('update', 'permission:usuarios.editar,staff');
+        Route::patch('users/{user}/rol', [UserController::class, 'actualizarRol'])
+            ->middleware('permission:usuarios.editar,staff');
+        Route::patch('users/{user}/estado', [UserController::class, 'actualizarEstado'])
+            ->middleware('permission:usuarios.editar,staff');
+        Route::patch('users/{user}/password', [UserController::class, 'resetearPassword'])
+            ->middleware('permission:usuarios.editar,staff');
+
+        Route::apiResource('roles', RoleController::class)
+            ->parameters(['roles' => 'role'])
+            ->middlewareFor(['index', 'show'], 'permission:roles.ver,staff')
+            ->middlewareFor('store', 'permission:roles.crear,staff')
+            ->middlewareFor('update', 'permission:roles.editar,staff')
+            ->middlewareFor('destroy', 'permission:roles.eliminar,staff');
+        Route::patch('roles/{role}/permisos', [RoleController::class, 'actualizarPermisos'])
+            ->middleware('permission:roles.editar,staff');
+
+        Route::get('permisos', [PermissionController::class, 'index'])
+            ->middleware('permission:roles.ver,staff');
 
         // Disponibilidad y citas (paso 5). El staff reserva para pacientes de su
         // clinica y consulta/cancela las citas del tenant.

@@ -10,6 +10,7 @@ use App\Repositories\Contracts\DiagnosisRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
+use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\StaffRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\TreatmentRepositoryInterface;
@@ -19,6 +20,7 @@ use App\Repositories\DiagnosisRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\ProfessionalRepository;
 use App\Repositories\ProfessionalScheduleRepository;
+use App\Repositories\RoleRepository;
 use App\Repositories\StaffRepository;
 use App\Repositories\TenantRepository;
 use App\Repositories\TreatmentRepository;
@@ -75,6 +77,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             AppointmentRepositoryInterface::class,
             AppointmentRepository::class,
+        );
+        $this->app->bind(
+            RoleRepositoryInterface::class,
+            RoleRepository::class,
         );
 
         // Canales de notificacion (paso 6). Cada uno implementa la misma interfaz

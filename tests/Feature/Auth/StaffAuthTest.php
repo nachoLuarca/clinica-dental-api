@@ -29,8 +29,11 @@ class StaffAuthTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonStructure(['token', 'token_type', 'data' => ['id', 'email', 'roles']])
-            // Auto-registro publico = menor privilegio, nunca 'admin'.
-            ->assertJsonPath('data.roles', ['recepcion']);
+            // Auto-registro publico = sin rol (paso 10, roles editables): el
+            // rol de base 'recepcion' se puede renombrar/borrar, asi que ya
+            // no hay ninguno "seguro" para asignar de antemano. Un admin de
+            // la clinica asigna el rol despues via PATCH /users/{id}/rol.
+            ->assertJsonPath('data.roles', []);
 
         $this->assertDatabaseHas('users', [
             'tenant_id' => $tenant->id,
