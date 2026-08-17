@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Models\Patient;
 use App\Models\Tenant;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -25,11 +26,12 @@ class PatientAuthService
     ) {}
 
     /**
-     * @param  array{clinica: string, nombre: string, email: string, password: string, fecha_nacimiento: string}  $data
+     * @param  array{clinica: string, nombre: string, rut: string, email: string, password: string, fecha_nacimiento: string}  $data
      */
     public function register(array $data): AuthResult
     {
         $tenant = $this->resolveTenant($data['clinica']);
+        $rut = Patient::normalizarRut($data['rut']);
 
         if ($this->patients->findByTenantAndEmail($tenant->id, $data['email']) !== null) {
             throw ValidationException::withMessages([
@@ -37,9 +39,16 @@ class PatientAuthService
             ]);
         }
 
+        if ($this->patients->findByTenantAndRut($tenant->id, $rut) !== null) {
+            throw ValidationException::withMessages([
+                'rut' => ['Ya existe un paciente con este RUT en la clinica.'],
+            ]);
+        }
+
         $patient = $this->patients->create([
             'tenant_id' => $tenant->id,
             'nombre' => $data['nombre'],
+            'rut' => $rut,
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'fecha_nacimiento' => $data['fecha_nacimiento'],

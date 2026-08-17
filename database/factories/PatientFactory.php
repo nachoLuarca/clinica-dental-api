@@ -23,6 +23,7 @@ class PatientFactory extends Factory
         return [
             'tenant_id' => Tenant::factory(),
             'nombre' => fake()->name(),
+            'rut' => fake()->unique()->numerify('##.###.###-#'),
             'email' => fake()->unique()->safeEmail(),
             'fecha_nacimiento' => fake()->dateTimeBetween('-80 years', '-1 years')->format('Y-m-d'),
             'email_verified_at' => now(),

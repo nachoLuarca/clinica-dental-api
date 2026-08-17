@@ -23,6 +23,7 @@ class PatientAuthTest extends TestCase
         $response = $this->postJson('/api/paciente/register', [
             'clinica' => $tenant->slug,
             'nombre' => 'Juan Perez',
+            'rut' => '12.345.678-9',
             'email' => 'juan@correo.test',
             'password' => 'secret123',
             'password_confirmation' => 'secret123',
@@ -30,11 +31,14 @@ class PatientAuthTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonStructure(['token', 'token_type', 'data' => ['id', 'email', 'fecha_nacimiento']]);
+            ->assertJsonStructure(['token', 'token_type', 'data' => ['id', 'email', 'rut', 'fecha_nacimiento']])
+            // Normalizado: sin puntos.
+            ->assertJsonPath('data.rut', '12345678-9');
 
         $this->assertDatabaseHas('patients', [
             'tenant_id' => $tenant->id,
             'email' => 'juan@correo.test',
+            'rut' => '12345678-9',
         ]);
     }
 
@@ -61,11 +65,26 @@ class PatientAuthTest extends TestCase
         $this->postJson('/api/paciente/register', [
             'clinica' => $tenant->slug,
             'nombre' => 'Juan',
+            'rut' => '12.345.678-9',
             'email' => 'juan@correo.test',
             'password' => 'secret123',
             'password_confirmation' => 'secret123',
             'fecha_nacimiento' => 'no-es-fecha',
         ])->assertStatus(422)->assertJsonValidationErrors(['fecha_nacimiento']);
+    }
+
+    public function test_registro_sin_rut_falla(): void
+    {
+        $tenant = Tenant::factory()->create();
+
+        $this->postJson('/api/paciente/register', [
+            'clinica' => $tenant->slug,
+            'nombre' => 'Juan',
+            'email' => 'juan@correo.test',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+            'fecha_nacimiento' => '1990-05-20',
+        ])->assertStatus(422)->assertJsonValidationErrors(['rut']);
     }
 
     public function test_mismo_email_puede_registrarse_como_paciente_en_dos_clinicas(): void
@@ -75,6 +94,7 @@ class PatientAuthTest extends TestCase
 
         $base = [
             'nombre' => 'Juan',
+            'rut' => '12.345.678-9',
             'email' => 'juan@correo.test',
             'password' => 'secret123',
             'password_confirmation' => 'secret123',
