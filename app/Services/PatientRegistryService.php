@@ -7,6 +7,7 @@ use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -31,7 +32,13 @@ class PatientRegistryService
 
     public function find(int $id): Patient
     {
-        return $this->patients->find($id, ['diagnoses'])
+        // Los diagnosticos solo se traen anidados si el staff tiene el
+        // permiso dedicado: sin esto, un rol sin 'diagnoses.ver' (ej.
+        // recepcion) veia igual la ficha clinica completa via este endpoint,
+        // aunque el endpoint dedicado de diagnosticos si la bloqueaba.
+        $conDiagnosticos = Auth::guard('staff')->user()?->can('diagnoses.ver') === true;
+
+        return $this->patients->find($id, $conDiagnosticos ? ['diagnoses'] : [])
             ?? throw (new ModelNotFoundException)->setModel(Patient::class);
     }
 

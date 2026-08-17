@@ -64,6 +64,23 @@ class TenantBrandingTest extends TestCase
         Storage::disk('public')->assertExists($logoPath);
     }
 
+    public function test_admin_puede_subir_logo_svg(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+        $token = $admin->createToken('staff', ['staff'])->plainTextToken;
+        // La regla 'image' de Laravel usa getimagesize(), que no reconoce
+        // SVG: con ella puesta, un .svg valido siempre fallaba la validacion
+        // pese a estar en la lista de 'mimes'.
+        $logo = UploadedFile::fake()->create('logo.svg', 5, 'image/svg+xml');
+
+        $response = $this->withToken($token)
+            ->post('/api/staff/tenant', ['_method' => 'PATCH', 'logo' => $logo])
+            ->assertOk();
+
+        Storage::disk('public')->assertExists($response->json('data.logo_path'));
+    }
+
     public function test_recepcion_no_puede_editar_la_marca_de_la_clinica(): void
     {
         $tenant = Tenant::factory()->create(['nombre' => 'Original']);

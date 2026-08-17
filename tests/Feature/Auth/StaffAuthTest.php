@@ -28,7 +28,9 @@ class StaffAuthTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonStructure(['token', 'token_type', 'data' => ['id', 'email']]);
+            ->assertJsonStructure(['token', 'token_type', 'data' => ['id', 'email', 'roles']])
+            // Auto-registro publico = menor privilegio, nunca 'admin'.
+            ->assertJsonPath('data.roles', ['recepcion']);
 
         $this->assertDatabaseHas('users', [
             'tenant_id' => $tenant->id,
@@ -52,6 +54,29 @@ class StaffAuthTest extends TestCase
         ]);
 
         $response->assertOk()->assertJsonStructure(['token']);
+    }
+
+    public function test_login_y_me_incluyen_los_roles_del_usuario(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $staff = User::factory()->rol('profesional')->create([
+            'tenant_id' => $tenant->id,
+            'email' => 'ana@clinica.test',
+            'password' => Hash::make('secret123'),
+        ]);
+
+        $this->postJson('/api/staff/login', [
+            'clinica' => $tenant->slug,
+            'email' => 'ana@clinica.test',
+            'password' => 'secret123',
+        ])->assertOk()->assertJsonPath('data.roles', ['profesional']);
+
+        $token = $staff->createToken('staff', ['staff'])->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/staff/me')
+            ->assertOk()
+            ->assertJsonPath('data.roles', ['profesional']);
     }
 
     public function test_login_con_password_incorrecta_falla(): void
