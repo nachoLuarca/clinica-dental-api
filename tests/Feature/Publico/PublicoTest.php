@@ -34,12 +34,34 @@ class PublicoTest extends TestCase
                 'nombre' => 'Clinica Publica',
                 'logo_url' => null,
                 'color_primario' => '#123456',
+                // Contraste WCAG sobre #123456 (azul oscuro): blanco.
+                'color_contraste' => '#ffffff',
             ]]);
     }
 
     public function test_marca_publica_sin_header_de_clinica_falla(): void
     {
         $this->getJson('/api/publico/tenant')->assertStatus(400);
+    }
+
+    public function test_color_contraste_es_negro_sobre_un_color_primario_claro(): void
+    {
+        $tenant = Tenant::factory()->create(['color_primario' => '#FFEE88']);
+
+        $this->withHeaders(['X-Clinica' => $tenant->slug])
+            ->getJson('/api/publico/tenant')
+            ->assertOk()
+            ->assertJsonPath('data.color_contraste', '#000000');
+    }
+
+    public function test_color_contraste_es_null_sin_color_primario(): void
+    {
+        $tenant = Tenant::factory()->create(['color_primario' => null]);
+
+        $this->withHeaders(['X-Clinica' => $tenant->slug])
+            ->getJson('/api/publico/tenant')
+            ->assertOk()
+            ->assertJsonPath('data.color_contraste', null);
     }
 
     public function test_lista_citas_por_rut_y_fecha_de_nacimiento(): void

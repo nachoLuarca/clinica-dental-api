@@ -33,6 +33,7 @@ final class MensajeNotificacion implements Arrayable
         public readonly string $tratamientoNombre,
         public readonly string $fechaHora,
         public readonly string $clinicaNombre,
+        public readonly ?string $misHorasUrl,
     ) {}
 
     /**
@@ -55,6 +56,7 @@ final class MensajeNotificacion implements Arrayable
             tratamientoNombre: self::limpiar($cita->treatment->nombre ?? ''),
             fechaHora: Carbon::parse($cita->fecha_hora)->format('d/m/Y H:i'),
             clinicaNombre: self::limpiar($cita->tenant->nombre ?? config('app.name', 'Clinica')),
+            misHorasUrl: self::misHorasUrl(),
         );
     }
 
@@ -100,6 +102,14 @@ final class MensajeNotificacion implements Arrayable
             'tratamiento_nombre' => $this->tratamientoNombre,
             'fecha_hora' => $this->fechaHora,
             'clinica_nombre' => $this->clinicaNombre,
+            'mis_horas_url' => $this->misHorasUrl,
         ];
+    }
+
+    private static function misHorasUrl(): ?string
+    {
+        $base = config('notificaciones.paciente_frontend_url');
+
+        return $base ? rtrim((string) $base, '/').'/mis-horas' : null;
     }
 }

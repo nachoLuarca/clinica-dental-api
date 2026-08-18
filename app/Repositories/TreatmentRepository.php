@@ -46,4 +46,12 @@ class TreatmentRepository implements TreatmentRepositoryInterface
     {
         $treatment->delete();
     }
+
+    public function existsSlug(string $slug, ?int $excludeId = null): bool
+    {
+        return Treatment::query()
+            ->where('slug', $slug)
+            ->when($excludeId !== null, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
+    }
 }

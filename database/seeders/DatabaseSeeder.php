@@ -174,27 +174,37 @@ class DatabaseSeeder extends Seeder
     {
         $definiciones = [
             'Limpieza dental' => [
+                'categoria' => 'Prevencion',
                 'descripcion' => 'Profilaxis y destartraje.',
+                'incluye' => ['Destartraje', 'Pulido dental', 'Revision general'],
                 'precio' => 25000,
                 'duracion_minutos' => 45,
             ],
             'Extraccion simple' => [
+                'categoria' => 'Cirugia',
                 'descripcion' => 'Extraccion de pieza dental sin complicaciones.',
+                'incluye' => ['Anestesia local', 'Extraccion', 'Indicaciones post-operatorias'],
                 'precio' => 35000,
                 'duracion_minutos' => 30,
             ],
             'Resina compuesta' => [
+                'categoria' => 'Restauracion',
                 'descripcion' => 'Obturacion con resina en pieza dental.',
+                'incluye' => ['Anestesia local si es necesaria', 'Obturacion con resina'],
                 'precio' => 30000,
                 'duracion_minutos' => 45,
             ],
             'Blanqueamiento dental' => [
+                'categoria' => 'Estetica',
                 'descripcion' => 'Blanqueamiento profesional en consulta.',
+                'incluye' => ['Evaluacion previa', 'Aplicacion de gel blanqueador', 'Kit de cuidado post-sesion'],
                 'precio' => 80000,
                 'duracion_minutos' => 60,
             ],
             'Control de ortodoncia' => [
+                'categoria' => 'Ortodoncia',
                 'descripcion' => 'Ajuste y revision mensual de brackets/alineadores.',
+                'incluye' => ['Revision', 'Ajuste de brackets/alineadores'],
                 'precio' => 20000,
                 'duracion_minutos' => 20,
             ],
@@ -206,9 +216,12 @@ class DatabaseSeeder extends Seeder
             $tratamientos[$nombre] = Treatment::updateOrCreate(
                 ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
                 [
+                    'categoria' => $datos['categoria'],
                     'descripcion' => $datos['descripcion'],
+                    'incluye' => $datos['incluye'],
                     'precio' => $datos['precio'],
                     'duracion_minutos' => $datos['duracion_minutos'],
+                    'slug' => \Illuminate\Support\Str::slug($nombre),
                     'es_diferencial' => false,
                     'activo' => true,
                 ]

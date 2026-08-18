@@ -18,7 +18,10 @@ class Treatment extends Model
 
     protected $fillable = [
         'nombre',
+        'categoria',
+        'slug',
         'descripcion',
+        'incluye',
         'precio',
         'duracion_minutos',
         'es_diferencial',
@@ -32,6 +35,7 @@ class Treatment extends Model
             'duracion_minutos' => 'integer',
             'es_diferencial' => 'boolean',
             'activo' => 'boolean',
+            'incluye' => 'array',
         ];
     }
 }

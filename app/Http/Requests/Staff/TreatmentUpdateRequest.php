@@ -18,7 +18,10 @@ class TreatmentUpdateRequest extends FormRequest
     {
         return [
             'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'categoria' => ['nullable', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],
+            'incluye' => ['sometimes', 'nullable', 'array'],
+            'incluye.*' => ['string', 'max:255'],
             'precio' => ['sometimes', 'required', 'numeric', 'min:0'],
             'duracion_minutos' => ['sometimes', 'integer', 'min:5', 'max:480'],
             'es_diferencial' => ['boolean'],
