@@ -71,6 +71,52 @@ class AvailabilityService
     }
 
     /**
+     * Modo "cualquier profesional disponible": agrega los slots libres de
+     * todos los profesionales activos del tenant. Cada slot trae su propio
+     * professional_id (dos profesionales con el mismo horario libre generan
+     * dos entradas), ordenados por hora, para que el frontend pueda mostrar
+     * "10:00 (con la Dra. X)" sin adivinar quien lo cubre.
+     *
+     * @return array<string, mixed>
+     */
+    public function forTenant(int $treatmentId, string $fecha): array
+    {
+        $treatment = $this->treatments->find($treatmentId)
+            ?? throw (new ModelNotFoundException)->setModel(Treatment::class);
+
+        $date = Carbon::parse($fecha)->startOfDay();
+        $fechaKey = $date->toDateString();
+        $duracion = (int) $treatment->duracion_minutos;
+
+        $slots = $this->professionals->allActivos()
+            ->flatMap(function (Professional $professional) use ($fechaKey, $date, $duracion) {
+                $slotsDelProfesional = $this->cache->remember(
+                    (int) $this->tenant->tenantId(),
+                    $professional->id,
+                    $fechaKey,
+                    $duracion,
+                    fn () => $this->calcularSlots($professional, $date, $duracion),
+                );
+
+                return array_map(
+                    fn (array $slot) => $slot + ['professional_id' => $professional->id],
+                    $slotsDelProfesional,
+                );
+            })
+            ->sortBy('fecha_hora')
+            ->values()
+            ->all();
+
+        return [
+            'professional_id' => null,
+            'treatment_id' => $treatmentId,
+            'fecha' => $fechaKey,
+            'duracion_minutos' => $duracion,
+            'slots' => $slots,
+        ];
+    }
+
+    /**
      * @return array<int, array<string, string>>
      */
     private function calcularSlots(Professional $professional, Carbon $date, int $duracion): array

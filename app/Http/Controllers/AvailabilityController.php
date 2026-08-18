@@ -18,11 +18,16 @@ class AvailabilityController extends Controller
 
     public function index(AvailabilityRequest $request): JsonResponse
     {
-        $data = $this->service->forProfessional(
-            (int) $request->integer('professional_id'),
-            (int) $request->integer('treatment_id'),
-            (string) $request->string('fecha'),
-        );
+        $data = $request->filled('professional_id')
+            ? $this->service->forProfessional(
+                (int) $request->integer('professional_id'),
+                (int) $request->integer('treatment_id'),
+                (string) $request->string('fecha'),
+            )
+            : $this->service->forTenant(
+                (int) $request->integer('treatment_id'),
+                (string) $request->string('fecha'),
+            );
 
         return response()->json(['data' => $data]);
     }

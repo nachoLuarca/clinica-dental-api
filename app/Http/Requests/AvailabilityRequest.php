@@ -22,7 +22,9 @@ class AvailabilityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'professional_id' => ['required', 'integer'],
+            // Opcional: sin professional_id, se agregan los slots libres de
+            // TODOS los profesionales activos (modo "cualquiera disponible").
+            'professional_id' => ['sometimes', 'nullable', 'integer'],
             'treatment_id' => ['required', 'integer'],
             'fecha' => ['required', 'date_format:Y-m-d'],
         ];

@@ -21,6 +21,15 @@ interface ProfessionalRepositoryInterface
     public function all(): Collection;
 
     /**
+     * Profesionales activos, con horarios cargados. Usado por el listado
+     * publico y por el modo "cualquier profesional disponible" de
+     * disponibilidad/reservas.
+     *
+     * @return Collection<int, Professional>
+     */
+    public function allActivos(): Collection;
+
+    /**
      * Listado paginado. $with permite eager loading explicito (evitar N+1).
      *
      * @param  array<int, string>  $with

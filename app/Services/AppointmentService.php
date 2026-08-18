@@ -57,9 +57,6 @@ class AppointmentService
     {
         $patientId ??= (int) $data['patient_id'];
 
-        $professional = $this->professionals->find((int) $data['professional_id'], ['schedules'])
-            ?? throw (new ModelNotFoundException)->setModel(Professional::class);
-
         $treatment = $this->treatments->find((int) $data['treatment_id'])
             ?? throw (new ModelNotFoundException)->setModel(Treatment::class);
 
@@ -70,11 +67,11 @@ class AppointmentService
         $duracion = (int) $treatment->duracion_minutos;
         $fin = $inicio->copy()->addMinutes($duracion);
 
-        $this->assertDentroDeHorario($professional, $inicio, $fin);
-        $this->assertSlotLibre($professional->id, $inicio, $fin);
+        $professionalId = isset($data['professional_id']) && $data['professional_id'] !== null
+            ? (int) $data['professional_id']
+            : null;
 
-        $appointment = $this->persistir([
-            'professional_id' => $professional->id,
+        $base = [
             'patient_id' => $patient->id,
             'treatment_id' => $treatment->id,
             'fecha_hora' => $inicio,
@@ -82,9 +79,21 @@ class AppointmentService
             'duracion_minutos' => $duracion,
             'estado' => Appointment::ESTADO_RESERVADA,
             'notas' => $data['notas'] ?? null,
-        ]);
+        ];
 
-        $this->invalidarCache($professional->id, $inicio);
+        if ($professionalId !== null) {
+            $professional = $this->professionals->find($professionalId, ['schedules'])
+                ?? throw (new ModelNotFoundException)->setModel(Professional::class);
+
+            $this->assertDentroDeHorario($professional, $inicio, $fin);
+            $this->assertSlotLibre($professional->id, $inicio, $fin);
+
+            $appointment = $this->persistir(['professional_id' => $professional->id] + $base);
+        } else {
+            $appointment = $this->crearConCualquierProfesionalDisponible($inicio, $fin, $base);
+        }
+
+        $this->invalidarCache($appointment->professional_id, $inicio);
 
         $appointment->load(self::WITH);
 
@@ -142,6 +151,35 @@ class AppointmentService
     }
 
     /**
+     * Modo "cualquier profesional disponible": prueba, en orden, cada
+     * profesional activo cuyo horario cubra el slot pedido. Si el primer
+     * candidato pierde la carrera contra otra reserva concurrente (indice
+     * unico parcial), sigue con el siguiente en vez de fallar de una -es
+     * la ventaja real de no pedir un profesional especifico-. Si ninguno
+     * tiene el horario libre, 409 igual que el modo con profesional fijo.
+     *
+     * @param  array<string, mixed>  $base
+     */
+    private function crearConCualquierProfesionalDisponible(Carbon $inicio, Carbon $fin, array $base): Appointment
+    {
+        $candidatos = $this->professionals->allActivos()->filter(
+            fn (Professional $p) => $this->dentroDeHorario($p, $inicio, $fin) && ! $this->appointments->hasOverlap($p->id, $inicio, $fin)
+        );
+
+        foreach ($candidatos as $professional) {
+            try {
+                return $this->persistir(['professional_id' => $professional->id] + $base);
+            } catch (SlotUnavailableException) {
+                continue;
+            }
+        }
+
+        throw new SlotUnavailableException(
+            'No hay ningun profesional disponible para ese horario. Por favor elige otro.'
+        );
+    }
+
+    /**
      * Persiste la cita traduciendo la colision del indice unico parcial en un
      * error de negocio claro (bloqueo optimista).
      *
@@ -162,9 +200,18 @@ class AppointmentService
 
     private function assertDentroDeHorario(Professional $professional, Carbon $inicio, Carbon $fin): void
     {
+        if (! $this->dentroDeHorario($professional, $inicio, $fin)) {
+            throw ValidationException::withMessages([
+                'fecha_hora' => ['El horario elegido esta fuera del horario de atencion del profesional.'],
+            ]);
+        }
+    }
+
+    private function dentroDeHorario(Professional $professional, Carbon $inicio, Carbon $fin): bool
+    {
         $diaSemana = $inicio->dayOfWeek;
 
-        $cabe = $professional->schedules
+        return $professional->schedules
             ->where('dia_semana', $diaSemana)
             ->contains(function ($tramo) use ($inicio, $fin) {
                 $tramoInicio = $inicio->copy()->setTimeFromTimeString($tramo->hora_inicio);
@@ -173,12 +220,6 @@ class AppointmentService
                 return $inicio->greaterThanOrEqualTo($tramoInicio)
                     && $fin->lessThanOrEqualTo($tramoFin);
             });
-
-        if (! $cabe) {
-            throw ValidationException::withMessages([
-                'fecha_hora' => ['El horario elegido esta fuera del horario de atencion del profesional.'],
-            ]);
-        }
     }
 
     private function assertSlotLibre(int $professionalId, Carbon $inicio, Carbon $fin): void

@@ -14,6 +14,11 @@ class ProfessionalRepository implements ProfessionalRepositoryInterface
         return Professional::query()->get();
     }
 
+    public function allActivos(): Collection
+    {
+        return Professional::query()->where('activo', true)->with('schedules')->orderBy('nombre')->get();
+    }
+
     public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator
     {
         return Professional::query()

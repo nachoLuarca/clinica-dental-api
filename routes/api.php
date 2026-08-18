@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\StaffAuthController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
 use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
+use App\Http\Controllers\Publico\ProfessionalController as PublicoProfessionalController;
 use App\Http\Controllers\Publico\TenantController as PublicoTenantController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
@@ -46,6 +47,7 @@ Route::get('openapi.yaml', [DocsController::class, 'spec']);
 // (middleware 'tenant.publico'). Rate limiting por tenant + IP ('throttle:publico').
 Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->group(function () {
     Route::get('tratamientos', [CatalogController::class, 'index']);
+    Route::get('profesionales', [PublicoProfessionalController::class, 'index']);
     Route::get('availability', [AvailabilityController::class, 'index']);
 
     // Marca de la clinica (nombre/logo/color) para el sitio publico.

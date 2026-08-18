@@ -22,7 +22,10 @@ class AppointmentStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'professional_id' => ['required', 'integer'],
+            // Opcional: sin professional_id, el servicio auto-asigna el
+            // primer profesional activo que tenga ese horario libre (modo
+            // "cualquiera disponible").
+            'professional_id' => ['sometimes', 'nullable', 'integer'],
             'treatment_id' => ['required', 'integer'],
             'fecha_hora' => ['required', 'date'],
             'notas' => ['nullable', 'string', 'max:1000'],
