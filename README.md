@@ -108,6 +108,14 @@ La suite cubre, entre otros, los tres puntos criticos de la arquitectura:
 aislamiento multi-tenant, bloqueo optimista de reservas y separacion de los dos
 guards de auth (incluyendo abilities).
 
+> **Importante**: `phpunit.xml` fuerza (`force="true"`) sus variables de
+> entorno (sqlite en memoria, etc.). Sin eso, como Docker ya define
+> `DB_CONNECTION=pgsql` a nivel de proceso via `env_file`, dotenv/PHPUnit no
+> pisan ese valor y los tests corren contra la base real -con `RefreshDatabase`
+> borrandola-. Si algun dia la demo aparece vacia sin razon aparente despues
+> de correr tests, revisar primero que ningun `<env>` de `phpunit.xml` haya
+> perdido su `force="true"`.
+
 ## Documentacion de la API (Swagger / OpenAPI)
 
 El contrato se mantiene a mano en `resources/openapi/openapi.yaml` (fuente unica
@@ -247,6 +255,26 @@ un dato bastante adivinable/conocido, por eso el lookup exige **RUT + fecha
 de nacimiento juntos** (`App\Services\Publico\PatientLookupService`) — un RUT
 correcto con la fecha equivocada da el mismo error generico que un RUT
 inexistente, para no habilitar enumeracion de pacientes.
+
+`GET /api/publico/profesionales` lista los profesionales activos (id, nombre,
+apellido, especialidad -nunca el email interno-) para que el sitio publico
+pueda mostrarlos o confirmar que existen antes de reservar.
+
+### Modo "cualquier profesional disponible"
+
+`professional_id` es **opcional** tanto en `GET /*/availability` como al crear
+una cita (`POST /*/appointments`), en los tres frontends (publico, staff y
+paciente comparten el mismo `AvailabilityRequest`/`AppointmentService`):
+
+- **Disponibilidad sin `professional_id`**: agrega los slots libres de todos
+  los profesionales activos del tenant. Cada slot trae su propio
+  `professional_id` (si dos profesionales tienen el mismo horario libre,
+  aparecen dos entradas), para que el frontend pueda mostrar quien lo cubre.
+- **Reserva sin `professional_id`**: el servicio prueba, en orden, cada
+  profesional activo cuyo horario cubra el slot pedido; si el primer
+  candidato pierde la carrera contra otra reserva concurrente, sigue con el
+  siguiente en vez de fallar de una. Si ninguno tiene el horario libre,
+  responde 409 igual que el modo con profesional fijo.
 
 ## Flujo de trabajo con Git
 

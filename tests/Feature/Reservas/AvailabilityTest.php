@@ -111,10 +111,13 @@ class AvailabilityTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
 
+        // professional_id es opcional (paso 11, modo "cualquier profesional
+        // disponible"): sin el, no deberia figurar en los errores.
         $this->withToken($this->staffTokenFor($tenant))
             ->getJson('/api/staff/availability')
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['professional_id', 'treatment_id', 'fecha']);
+            ->assertJsonValidationErrors(['treatment_id', 'fecha'])
+            ->assertJsonMissingValidationErrors(['professional_id']);
     }
 
     public function test_no_ve_disponibilidad_de_profesional_de_otro_tenant(): void
