@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Auth\RoleProvisioner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -122,10 +123,10 @@ class RolesYPermisosTest extends TestCase
 
         // Role NO tiene global scope propio en este paquete: el tenant_id es
         // una columna plana como cualquier otra, hay que filtrar por ella.
-        $rolAdminA = \Spatie\Permission\Models\Role::where('name', 'admin')
+        $rolAdminA = Role::where('name', 'admin')
             ->where('tenant_id', $tenantA->id)
             ->first();
-        $rolAdminB = \Spatie\Permission\Models\Role::where('name', 'admin')
+        $rolAdminB = Role::where('name', 'admin')
             ->where('tenant_id', $tenantB->id)
             ->first();
 

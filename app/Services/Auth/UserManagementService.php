@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
@@ -95,7 +96,7 @@ class UserManagementService
 
         $rolNuevo = $this->roles->findByName($tenantId, $rolNombre);
         if ($rolNuevo === null) {
-            throw (new ModelNotFoundException)->setModel(\Spatie\Permission\Models\Role::class);
+            throw (new ModelNotFoundException)->setModel(Role::class);
         }
 
         $teniaGestion = $user->can(RoleProvisioner::PERMISO_GESTION);
@@ -161,7 +162,7 @@ class UserManagementService
     {
         $tenantId = $this->requireTenantId();
         $rol = $this->roles->findByName($tenantId, $rolNombre)
-            ?? throw (new ModelNotFoundException)->setModel(\Spatie\Permission\Models\Role::class);
+            ?? throw (new ModelNotFoundException)->setModel(Role::class);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($tenantId);
         $user->syncRoles([$rol]);

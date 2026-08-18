@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\AvailabilityController;
-use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Auth\PatientAuthController;
 use App\Http\Controllers\Auth\StaffAuthController;
+use App\Http\Controllers\AvailabilityController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
 use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
@@ -12,6 +12,7 @@ use App\Http\Controllers\Publico\TenantController as PublicoTenantController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
 use App\Http\Controllers\Staff\DiagnosisController;
+use App\Http\Controllers\Staff\EspecialidadController;
 use App\Http\Controllers\Staff\PatientController;
 use App\Http\Controllers\Staff\PermissionController;
 use App\Http\Controllers\Staff\ProfessionalController;
@@ -106,6 +107,14 @@ Route::prefix('staff')->group(function () {
             ->middlewareFor('store', 'permission:treatments.crear,staff')
             ->middlewareFor('update', 'permission:treatments.editar,staff')
             ->middlewareFor('destroy', 'permission:treatments.eliminar,staff');
+        // Catalogo de especialidades (paso 11): asignables a profesionales,
+        // mapeadas a categorias de tratamiento para el filtro de reserva.
+        Route::apiResource('especialidades', EspecialidadController::class)
+            ->parameters(['especialidades' => 'especialidad'])
+            ->middlewareFor(['index', 'show'], 'permission:especialidades.ver,staff')
+            ->middlewareFor('store', 'permission:especialidades.crear,staff')
+            ->middlewareFor('update', 'permission:especialidades.editar,staff')
+            ->middlewareFor('destroy', 'permission:especialidades.eliminar,staff');
         Route::apiResource('budgets', BudgetController::class)
             ->parameters(['budgets' => 'budget'])
             ->middlewareFor(['index', 'show'], 'permission:budgets.ver,staff')

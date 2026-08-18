@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -25,10 +26,10 @@ return new class extends Migration
         // Backfill: los tratamientos ya sembrados no tienen slug. Se deriva del
         // nombre + id para que sea unico incluso con nombres repetidos entre
         // tenants (el slug es unico por tenant, no global).
-        $treatments = \Illuminate\Support\Facades\DB::table('treatments')->select('id', 'tenant_id', 'nombre')->get();
+        $treatments = DB::table('treatments')->select('id', 'tenant_id', 'nombre')->get();
 
         foreach ($treatments as $treatment) {
-            \Illuminate\Support\Facades\DB::table('treatments')
+            DB::table('treatments')
                 ->where('id', $treatment->id)
                 ->update(['slug' => Str::slug($treatment->nombre).'-'.$treatment->id]);
         }

@@ -7,7 +7,6 @@ use App\Http\Requests\Publico\PatientLookupRequest;
 use App\Services\AppointmentService;
 use App\Services\Publico\PatientLookupService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * Gestion PUBLICA (sin login) de las citas del paciente: identificado por

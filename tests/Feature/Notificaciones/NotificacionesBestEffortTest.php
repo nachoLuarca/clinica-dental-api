@@ -3,7 +3,6 @@
 namespace Tests\Feature\Notificaciones;
 
 use App\Mail\CitaNotificacionMail;
-use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;

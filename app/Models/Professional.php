@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\ProfessionalFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -20,6 +21,7 @@ class Professional extends Model
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'nombre',
         'apellido',
         'especialidad',
@@ -42,6 +44,19 @@ class Professional extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(ProfessionalSchedule::class);
+    }
+
+    /**
+     * Especialidades formales asignadas (paso 11: filtro de reserva por
+     * categoria de tratamiento). Distintas del campo libre 'especialidad'
+     * (texto historico, solo presentacion): esta relacion es la que se usa
+     * para filtrar. Un profesional puede tener mas de una.
+     *
+     * @return BelongsToMany<Especialidad, $this>
+     */
+    public function especialidades(): BelongsToMany
+    {
+        return $this->belongsToMany(Especialidad::class, 'professional_especialidad')->withTimestamps();
     }
 
     /**

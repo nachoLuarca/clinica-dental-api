@@ -1,12 +1,20 @@
 <?php
 
+use App\Http\Middleware\ResolvePublicTenant;
+use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use Spatie\Permission\Exceptions\UnauthorizedException;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -19,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Headers de seguridad basicos en todas las respuestas de la API.
         $middleware->api(append: [
-            \App\Http\Middleware\SecurityHeaders::class,
+            SecurityHeaders::class,
         ]);
 
         // Alias de middleware del proyecto:
@@ -30,13 +38,13 @@ return Application::configure(basePath: dirname(__DIR__))
         //  - 'abilities'/'ability': verificacion de abilities del token Sanctum
         //    (defensa en profundidad sobre la separacion de guards staff/paciente).
         $middleware->alias([
-            'tenant' => \App\Http\Middleware\ResolveTenant::class,
-            'tenant.publico' => \App\Http\Middleware\ResolvePublicTenant::class,
-            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
-            'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'tenant' => ResolveTenant::class,
+            'tenant.publico' => ResolvePublicTenant::class,
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
 
         // Esta es una API pura (sin rutas 'web' de login): por defecto, un

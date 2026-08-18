@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Professional;
+use App\Repositories\Contracts\ProfessionalEspecialidadRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -11,23 +12,25 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Reglas de negocio de profesionales. El controller solo orquesta; toda la
- * logica (incl. horarios) vive aqui y delega el acceso a datos en repositorios.
+ * logica (incl. horarios y especialidades) vive aqui y delega el acceso a
+ * datos en repositorios.
  */
 class ProfessionalService
 {
     public function __construct(
         private readonly ProfessionalRepositoryInterface $professionals,
         private readonly ProfessionalScheduleRepositoryInterface $schedules,
+        private readonly ProfessionalEspecialidadRepositoryInterface $especialidades,
     ) {}
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->professionals->paginate($perPage, ['schedules']);
+        return $this->professionals->paginate($perPage, ['schedules', 'especialidades']);
     }
 
     public function find(int $id): Professional
     {
-        return $this->professionals->find($id, ['schedules'])
+        return $this->professionals->find($id, ['schedules', 'especialidades'])
             ?? throw (new ModelNotFoundException)->setModel(Professional::class);
     }
 
@@ -40,13 +43,20 @@ class ProfessionalService
             $horarios = $data['horarios'] ?? null;
             unset($data['horarios']);
 
+            $especialidadIds = $data['especialidades'] ?? null;
+            unset($data['especialidades']);
+
             $professional = $this->professionals->create($data);
 
             if (is_array($horarios)) {
                 $this->schedules->syncForProfessional($professional, $horarios);
             }
 
-            return $professional->load('schedules');
+            if (is_array($especialidadIds)) {
+                $this->especialidades->syncForProfessional($professional, $especialidadIds);
+            }
+
+            return $professional->load(['schedules', 'especialidades']);
         });
     }
 
@@ -61,14 +71,21 @@ class ProfessionalService
             $horarios = $data['horarios'] ?? null;
             unset($data['horarios']);
 
+            $especialidadIds = $data['especialidades'] ?? null;
+            unset($data['especialidades']);
+
             $this->professionals->update($professional, $data);
 
-            // Solo se reemplazan los horarios si vienen en la peticion.
+            // Solo se reemplazan los horarios/especialidades si vienen en la peticion.
             if (is_array($horarios)) {
                 $this->schedules->syncForProfessional($professional, $horarios);
             }
 
-            return $professional->refresh()->load('schedules');
+            if (is_array($especialidadIds)) {
+                $this->especialidades->syncForProfessional($professional, $especialidadIds);
+            }
+
+            return $professional->refresh()->load(['schedules', 'especialidades']);
         });
     }
 

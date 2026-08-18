@@ -90,7 +90,7 @@ class AppointmentService
 
             $appointment = $this->persistir(['professional_id' => $professional->id] + $base);
         } else {
-            $appointment = $this->crearConCualquierProfesionalDisponible($inicio, $fin, $base);
+            $appointment = $this->crearConCualquierProfesionalDisponible($treatment, $inicio, $fin, $base);
         }
 
         $this->invalidarCache($appointment->professional_id, $inicio);
@@ -152,17 +152,18 @@ class AppointmentService
 
     /**
      * Modo "cualquier profesional disponible": prueba, en orden, cada
-     * profesional activo cuyo horario cubra el slot pedido. Si el primer
-     * candidato pierde la carrera contra otra reserva concurrente (indice
-     * unico parcial), sigue con el siguiente en vez de fallar de una -es
-     * la ventaja real de no pedir un profesional especifico-. Si ninguno
-     * tiene el horario libre, 409 igual que el modo con profesional fijo.
+     * profesional activo elegible para la categoria del tratamiento (paso
+     * 11) cuyo horario cubra el slot pedido. Si el primer candidato pierde
+     * la carrera contra otra reserva concurrente (indice unico parcial),
+     * sigue con el siguiente en vez de fallar de una -es la ventaja real de
+     * no pedir un profesional especifico-. Si ninguno tiene el horario
+     * libre, 409 igual que el modo con profesional fijo.
      *
      * @param  array<string, mixed>  $base
      */
-    private function crearConCualquierProfesionalDisponible(Carbon $inicio, Carbon $fin, array $base): Appointment
+    private function crearConCualquierProfesionalDisponible(Treatment $treatment, Carbon $inicio, Carbon $fin, array $base): Appointment
     {
-        $candidatos = $this->professionals->allActivos()->filter(
+        $candidatos = $this->professionals->allActivosParaCategoria($treatment->categoria)->filter(
             fn (Professional $p) => $this->dentroDeHorario($p, $inicio, $fin) && ! $this->appointments->hasOverlap($p->id, $inicio, $fin)
         );
 

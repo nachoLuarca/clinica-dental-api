@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Staff;
 
+use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ProfessionalUpdateRequest extends FormRequest
 {
@@ -27,6 +29,12 @@ class ProfessionalUpdateRequest extends FormRequest
             'horarios.*.dia_semana' => ['required_with:horarios', 'integer', 'between:0,6'],
             'horarios.*.hora_inicio' => ['required_with:horarios', 'date_format:H:i'],
             'horarios.*.hora_fin' => ['required_with:horarios', 'date_format:H:i', 'after:horarios.*.hora_inicio'],
+
+            'especialidades' => ['sometimes', 'array'],
+            'especialidades.*' => [
+                'integer',
+                Rule::exists('especialidades', 'id')->where('tenant_id', app(TenantContext::class)->tenantId()),
+            ],
         ];
     }
 }
