@@ -300,6 +300,35 @@ paciente comparten el mismo `AvailabilityRequest`/`AppointmentService`):
   siguiente en vez de fallar de una. Si ninguno tiene el horario libre,
   responde 409 igual que el modo con profesional fijo.
 
+## Especialidades: filtro de reserva por especialidad y categoria
+
+Cada clinica arma su propio catalogo de **especialidades** (ej. "Odontologia
+General", "Ortodoncia", "Endodoncia"), asignables a los profesionales (CRUD en
+`/api/staff/especialidades`, permisos `especialidades.*`). Un profesional
+**puede tener mas de una** especialidad (relacion N:N, `Professional::especialidades()`).
+
+Cada especialidad declara que **categorias de tratamiento** puede cubrir
+(`Especialidad::categorias`, mapeado a `Treatment::categoria` -texto libre
+elegido por la clinica al cargar el catalogo-). Con eso, el flujo de reserva
+se filtra en cascada: **tratamiento elegido -> su categoria -> especialidades
+que la cubren -> profesionales con esa especialidad**:
+
+- `GET /api/publico/profesionales?treatment_id=` — el listado publico se
+  acota a los profesionales elegibles para la categoria de ese tratamiento.
+- La disponibilidad agregada (`GET /*/availability` sin `professional_id`) y
+  el auto-asignado al reservar (`POST /*/appointments` sin `professional_id`,
+  ver seccion anterior) tambien excluyen a los profesionales no elegibles.
+
+Se administra junto con el profesional: el `store`/`update` de
+`/api/staff/professionals` acepta un array `especialidades` (IDs), que
+**reemplaza por completo** las asignadas (mismo patron que `horarios`).
+
+**Comportamiento sin configurar** (backward-compatible): si un tratamiento no
+tiene `categoria`, o si la clinica todavia no cargo ningun mapeo
+especialidad↔categoria, el filtro no se aplica (se comporta como antes de
+este paso) — asi una clinica que no adopta especialidades no pierde
+profesionales de golpe en la reserva.
+
 ## Flujo de trabajo con Git
 
 Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —

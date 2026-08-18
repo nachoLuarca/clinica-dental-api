@@ -17,6 +17,7 @@ class Treatment extends Model
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'nombre',
         'categoria',
         'slug',

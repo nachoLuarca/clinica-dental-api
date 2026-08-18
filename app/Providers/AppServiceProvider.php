@@ -2,22 +2,26 @@
 
 namespace App\Providers;
 
+use App\Notificaciones\Canales\CorreoNotificacionServicio;
+use App\Notificaciones\Canales\WhatsAppNotificacionServicio;
 use App\Repositories\AppointmentRepository;
 use App\Repositories\BudgetRepository;
 use App\Repositories\Contracts\AppointmentRepositoryInterface;
 use App\Repositories\Contracts\BudgetRepositoryInterface;
 use App\Repositories\Contracts\DiagnosisRepositoryInterface;
+use App\Repositories\Contracts\EspecialidadRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
+use App\Repositories\Contracts\ProfessionalEspecialidadRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\StaffRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\TreatmentRepositoryInterface;
-use App\Notificaciones\Canales\CorreoNotificacionServicio;
-use App\Notificaciones\Canales\WhatsAppNotificacionServicio;
 use App\Repositories\DiagnosisRepository;
+use App\Repositories\EspecialidadRepository;
 use App\Repositories\PatientRepository;
+use App\Repositories\ProfessionalEspecialidadRepository;
 use App\Repositories\ProfessionalRepository;
 use App\Repositories\ProfessionalScheduleRepository;
 use App\Repositories\RoleRepository;
@@ -81,6 +85,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             RoleRepositoryInterface::class,
             RoleRepository::class,
+        );
+        $this->app->bind(
+            EspecialidadRepositoryInterface::class,
+            EspecialidadRepository::class,
+        );
+        $this->app->bind(
+            ProfessionalEspecialidadRepositoryInterface::class,
+            ProfessionalEspecialidadRepository::class,
         );
 
         // Canales de notificacion (paso 6). Cada uno implementa la misma interfaz

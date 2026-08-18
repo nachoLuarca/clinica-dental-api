@@ -30,6 +30,19 @@ interface ProfessionalRepositoryInterface
     public function allActivos(): Collection;
 
     /**
+     * Profesionales activos elegibles para una categoria de tratamiento
+     * dada (paso 11: filtro de reserva por especialidad<->categoria).
+     *
+     * Si $categoria es null, o si el tenant todavia no configuro ningun
+     * mapeo especialidad<->categoria, no filtra (se comporta igual que
+     * allActivos()) para no romper clinicas que aun no adoptaron el
+     * catalogo de especialidades.
+     *
+     * @return Collection<int, Professional>
+     */
+    public function allActivosParaCategoria(?string $categoria): Collection;
+
+    /**
      * Listado paginado. $with permite eager loading explicito (evitar N+1).
      *
      * @param  array<int, string>  $with

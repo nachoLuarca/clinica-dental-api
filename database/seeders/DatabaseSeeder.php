@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Budget;
 use App\Models\BudgetItem;
 use App\Models\Diagnosis;
+use App\Models\Especialidad;
 use App\Models\Patient;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
@@ -17,6 +18,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Seeder de datos de demo/desarrollo: deja una clinica de prueba funcionando
@@ -51,6 +53,7 @@ class DatabaseSeeder extends Seeder
 
         $this->sembrarStaff();
         [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia] = $this->sembrarProfesionales();
+        $this->sembrarEspecialidades($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia);
         $tratamientos = $this->sembrarTratamientos();
         $pacientes = $this->sembrarPacientes();
         $this->sembrarCitasDiagnosticosYPresupuesto($profesionalGeneral, $profesionalOrtodoncia, $tratamientos, $pacientes);
@@ -168,6 +171,52 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
+     * Catalogo de especialidades (paso 11) + su mapeo a categorias de
+     * tratamiento + asignacion a los 3 profesionales demo. Sin esto, el
+     * filtro de reserva por especialidad<->categoria no tiene nada que
+     * filtrar (ver ProfessionalRepository::allActivosParaCategoria: sin
+     * mapeo configurado, no filtra -asi que esto no es estrictamente
+     * necesario para que la demo funcione-, pero sin sembrarlo no se puede
+     * probar el filtro en si).
+     *
+     * Mapeo elegido (conocimiento de dominio dental): un odontologo general
+     * cubre las categorias mas comunes del catalogo (prevencion, cirugia
+     * menor, restauracion, estetica); ortodoncia y endodoncia son
+     * especialidades acotadas a su propia categoria.
+     */
+    private function sembrarEspecialidades(
+        Professional $general,
+        Professional $ortodoncia,
+        Professional $endodoncia,
+    ): void {
+        $general->especialidades()->sync([
+            $this->sembrarEspecialidad('Odontologia General', ['Prevencion', 'Cirugia', 'Restauracion', 'Estetica'])->id,
+        ]);
+        $ortodoncia->especialidades()->sync([
+            $this->sembrarEspecialidad('Ortodoncia', ['Ortodoncia'])->id,
+        ]);
+        $endodoncia->especialidades()->sync([
+            $this->sembrarEspecialidad('Endodoncia', ['Endodoncia'])->id,
+        ]);
+    }
+
+    /**
+     * @param  array<int, string>  $categorias
+     */
+    private function sembrarEspecialidad(string $nombre, array $categorias): Especialidad
+    {
+        $especialidad = Especialidad::firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
+        );
+
+        foreach ($categorias as $categoria) {
+            $especialidad->categorias()->firstOrCreate(['categoria' => $categoria]);
+        }
+
+        return $especialidad;
+    }
+
+    /**
      * @return array<string, Treatment>
      */
     private function sembrarTratamientos(): array
@@ -208,6 +257,13 @@ class DatabaseSeeder extends Seeder
                 'precio' => 20000,
                 'duracion_minutos' => 20,
             ],
+            'Tratamiento de conducto' => [
+                'categoria' => 'Endodoncia',
+                'descripcion' => 'Endodoncia (tratamiento de conducto) en pieza dental danada.',
+                'incluye' => ['Anestesia local', 'Limpieza y sellado del conducto', 'Control post-operatorio'],
+                'precio' => 60000,
+                'duracion_minutos' => 60,
+            ],
         ];
 
         $tratamientos = [];
@@ -221,7 +277,7 @@ class DatabaseSeeder extends Seeder
                     'incluye' => $datos['incluye'],
                     'precio' => $datos['precio'],
                     'duracion_minutos' => $datos['duracion_minutos'],
-                    'slug' => \Illuminate\Support\Str::slug($nombre),
+                    'slug' => Str::slug($nombre),
                     'es_diferencial' => false,
                     'activo' => true,
                 ]

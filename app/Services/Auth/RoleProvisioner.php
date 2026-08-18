@@ -37,7 +37,7 @@ class RoleProvisioner
      */
     public static function matriz(): array
     {
-        $recursos = ['professionals', 'patients', 'diagnoses', 'treatments', 'budgets', 'appointments', 'roles', 'usuarios'];
+        $recursos = ['professionals', 'patients', 'diagnoses', 'treatments', 'especialidades', 'budgets', 'appointments', 'roles', 'usuarios'];
         $permisos = [];
 
         foreach ($recursos as $recurso) {
@@ -62,6 +62,7 @@ class RoleProvisioner
                 'patients.ver', 'patients.editar',
                 'diagnoses.ver', 'diagnoses.crear', 'diagnoses.editar',
                 'treatments.ver',
+                'especialidades.ver',
                 'budgets.ver',
                 'appointments.ver', 'appointments.eliminar',
                 'tenant.ver',
@@ -73,6 +74,7 @@ class RoleProvisioner
                 'patients.ver', 'patients.crear', 'patients.editar',
                 'appointments.ver', 'appointments.crear', 'appointments.eliminar',
                 'treatments.ver',
+                'especialidades.ver',
                 'budgets.ver', 'budgets.crear',
                 'professionals.ver',
                 'tenant.ver',
