@@ -65,12 +65,21 @@ class WhatsAppNotificacionServicio implements NotificacionServicio
 
         $encabezado = $encabezados[$mensaje->tipo] ?? "Hola {$mensaje->pacienteNombre}, tienes una novedad con tu cita.";
 
-        return implode("\n", [
+        $lineas = [
             $encabezado,
             "Profesional: {$mensaje->profesionalNombre}",
             "Tratamiento: {$mensaje->tratamientoNombre}",
             "Fecha y hora: {$mensaje->fechaHora}",
-            $mensaje->clinicaNombre,
-        ]);
+        ];
+
+        if (in_array($mensaje->tipo, [MensajeNotificacion::TIPO_CONFIRMACION, MensajeNotificacion::TIPO_RECORDATORIO], true)) {
+            $lineas[] = $mensaje->misHorasUrl
+                ? "Para cancelar, entra a {$mensaje->misHorasUrl} con tu RUT y fecha de nacimiento."
+                : 'Para cancelar, ingresa tu RUT y fecha de nacimiento en la seccion "Mis horas" del sitio.';
+        }
+
+        $lineas[] = $mensaje->clinicaNombre;
+
+        return implode("\n", $lineas);
     }
 }

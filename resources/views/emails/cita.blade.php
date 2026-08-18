@@ -30,6 +30,18 @@
         <li><strong>Fecha y hora:</strong> {{ $mensaje->fechaHora }}</li>
     </ul>
 
+    @if (in_array($mensaje->tipo, ['confirmacion', 'recordatorio'], true))
+        <p>
+            ¿Necesitas cancelar? Podes hacerlo sin crear una cuenta, ingresando tu
+            RUT y fecha de nacimiento en la seccion "Mis horas" del sitio
+            @if ($mensaje->misHorasUrl)
+                (<a href="{{ $mensaje->misHorasUrl }}">{{ $mensaje->misHorasUrl }}</a>).
+            @else
+                de {{ $mensaje->clinicaNombre }}.
+            @endif
+        </p>
+    @endif
+
     <p>Gracias por preferirnos,<br>{{ $mensaje->clinicaNombre }}</p>
 </body>
 </html>

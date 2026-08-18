@@ -32,4 +32,6 @@ interface TreatmentRepositoryInterface
     public function update(Treatment $treatment, array $data): Treatment;
 
     public function delete(Treatment $treatment): void;
+
+    public function existsSlug(string $slug, ?int $excludeId = null): bool;
 }

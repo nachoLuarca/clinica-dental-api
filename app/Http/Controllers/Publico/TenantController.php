@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
  * logo y color, para que cada clinica se vea con su propia identidad. Mismo
  * TenantService que usa el staff (App\Http\Controllers\Staff\TenantController)
  * -no depende de auth, solo del TenantContext ya fijado por 'tenant.publico'-,
- * pero acotado a los 3 campos de marca: nunca expone 'activo' ni el 'slug'
+ * pero acotado a los campos de marca: nunca expone 'activo' ni el 'slug'
  * (interno) a un cliente sin autenticar.
  */
 class TenantController extends Controller
@@ -26,6 +26,10 @@ class TenantController extends Controller
             'nombre' => $tenant->nombre,
             'logo_url' => $tenant->logo_url,
             'color_primario' => $tenant->color_primario,
+            // Blanco o negro, el que de mejor contraste sobre color_primario
+            // (WCAG): asi el frontend no corre riesgo de texto ilegible si una
+            // clinica elige un color primario claro para sus botones.
+            'color_contraste' => $tenant->color_contraste,
         ]]);
     }
 }

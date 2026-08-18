@@ -85,4 +85,17 @@ return [
         'ventana_minutos' => (int) env('RECORDATORIO_VENTANA_MINUTOS', 60),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | URL del sitio publico de pacientes
+    |--------------------------------------------------------------------------
+    |
+    | Se linkea desde el correo de confirmacion de cita ("como cancelar").
+    | Opcional: si no esta configurada, el correo igual explica el flujo
+    | (RUT + fecha de nacimiento en "Mis horas") pero sin link clickeable.
+    |
+    */
+
+    'paciente_frontend_url' => env('PACIENTE_FRONTEND_URL'),
+
 ];

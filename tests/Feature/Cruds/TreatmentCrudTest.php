@@ -70,4 +70,48 @@ class TreatmentCrudTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['nombre', 'precio']);
     }
+
+    public function test_crear_tratamiento_acepta_categoria_e_incluye_y_genera_slug(): void
+    {
+        $tenant = Tenant::factory()->create();
+
+        $this->withToken($this->staffTokenFor($tenant))
+            ->postJson('/api/staff/treatments', [
+                'nombre' => 'Limpieza Dental',
+                'categoria' => 'Prevencion',
+                'incluye' => ['Destartraje', 'Pulido'],
+                'precio' => 25000,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.categoria', 'Prevencion')
+            ->assertJsonPath('data.incluye', ['Destartraje', 'Pulido'])
+            ->assertJsonPath('data.slug', 'limpieza-dental');
+    }
+
+    public function test_dos_tratamientos_con_el_mismo_nombre_generan_slugs_distintos(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $token = $this->staffTokenFor($tenant);
+        $payload = ['nombre' => 'Control', 'precio' => 10000];
+
+        $primero = $this->withToken($token)->postJson('/api/staff/treatments', $payload)
+            ->assertCreated()->json('data');
+        $segundo = $this->withToken($token)->postJson('/api/staff/treatments', $payload)
+            ->assertCreated()->json('data');
+
+        $this->assertSame('control', $primero['slug']);
+        $this->assertSame('control-2', $segundo['slug']);
+    }
+
+    public function test_renombrar_tratamiento_regenera_el_slug(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $token = $this->staffTokenFor($tenant);
+        $t = Treatment::factory()->create(['tenant_id' => $tenant->id, 'nombre' => 'Viejo', 'slug' => 'viejo']);
+
+        $this->withToken($token)
+            ->putJson("/api/staff/treatments/{$t->id}", ['nombre' => 'Nuevo Nombre', 'precio' => 30000])
+            ->assertOk()
+            ->assertJsonPath('data.slug', 'nuevo-nombre');
+    }
 }

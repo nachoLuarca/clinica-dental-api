@@ -157,6 +157,12 @@ Para conectar un numero real:
 > Aceptable para pruebas; para produccion con clinicas pagando habria que migrar
 > a la Meta Cloud API. Si WhatsApp falla, el correo igual sale (best-effort).
 
+El correo/WhatsApp de **confirmacion y recordatorio** explica como cancelar
+sin crear cuenta (RUT + fecha de nacimiento en "Mis horas", ver seccion de
+gestion publica de citas mas abajo). Si `PACIENTE_FRONTEND_URL` esta seteada
+en `.env`, se linkea `{PACIENTE_FRONTEND_URL}/mis-horas`; si no, el mensaje
+igual explica el flujo pero sin link clickeable.
+
 ## Estructura de capas
 
 ```
@@ -233,6 +239,24 @@ con body `multipart/form-data`, la subida de logo requiere method spoofing:
 `GET /api/publico/tenant` expone la misma marca (`nombre`, `logo_url`,
 `color_primario`, sin `slug` ni `activo`) para el sitio publico de pacientes,
 sin login: tenant resuelto por `X-Clinica` igual que el resto de `/publico`.
+
+Ambos payloads (staff y publico) incluyen tambien `color_contraste`: `#ffffff`
+o `#000000`, el que de mejor contraste WCAG sobre `color_primario` (calculado
+en `App\Models\Tenant`, no lo manda el cliente). Asi el frontend nunca corre
+riesgo de texto ilegible si una clinica elige un color primario claro para sus
+botones. Es `null` si la clinica no configuro `color_primario` todavia.
+
+## Catalogo de tratamientos: ficha rica
+
+Ademas de `nombre`/`descripcion`/`precio`/`duracion_minutos`, cada tratamiento
+tiene:
+
+- `categoria` — agrupa el catalogo (ej. "Estetica", "Ortodoncia").
+- `incluye` — array de strings con que trae la sesion.
+- `slug` — identificador legible para la URL de la ficha en el sitio publico;
+  **lo deriva el servicio del nombre** (nunca lo manda el cliente), unico por
+  tenant, con sufijo numerico si hay colision (`control`, `control-2`, ...).
+  Se regenera si se renombra el tratamiento.
 
 ## Sitio publico de pacientes: gestion de citas sin login (RUT)
 
