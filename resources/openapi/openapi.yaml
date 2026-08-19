@@ -695,6 +695,8 @@ components:
       required: [nombre, precio]
       properties:
         nombre: { type: string }
+        categoria: { type: string, nullable: true, description: Texto libre, solo descriptivo (agrupa la ficha rica del catalogo publico) }
+        especialidad_id: { type: integer, nullable: true, description: FK a especialidades (filtro real de reserva) }
         descripcion: { type: string, nullable: true }
         precio: { type: number, minimum: 0 }
         duracion_minutos: { type: integer, minimum: 5, maximum: 480, default: 30 }

@@ -12,13 +12,14 @@ class TreatmentRepository implements TreatmentRepositoryInterface
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
         return Treatment::query()
+            ->with('especialidad')
             ->latest('id')
             ->paginate($perPage);
     }
 
     public function find(int $id): ?Treatment
     {
-        return Treatment::query()->find($id);
+        return Treatment::query()->with('especialidad')->find($id);
     }
 
     public function findManyByIds(array $ids): Collection
@@ -53,5 +54,14 @@ class TreatmentRepository implements TreatmentRepositoryInterface
             ->where('slug', $slug)
             ->when($excludeId !== null, fn ($q) => $q->where('id', '!=', $excludeId))
             ->exists();
+    }
+
+    public function syncEspecialidad(int $especialidadId, array $treatmentIds): void
+    {
+        Treatment::query()->where('especialidad_id', $especialidadId)->update(['especialidad_id' => null]);
+
+        if ($treatmentIds !== []) {
+            Treatment::query()->whereIn('id', $treatmentIds)->update(['especialidad_id' => $especialidadId]);
+        }
     }
 }

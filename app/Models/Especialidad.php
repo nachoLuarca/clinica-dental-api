@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Especialidad odontologica (Odontologia General, Ortodoncia, Endodoncia,
  * etc.). Aislada por tenant: cada clinica arma su propio catalogo.
  *
- * Se relaciona con Treatment::categoria (texto libre) via
- * EspecialidadCategoria, y con Professional via el pivot
- * professional_especialidad (un profesional puede tener varias).
+ * Se relaciona con Treatment por FK real (Treatment::especialidad_id, un
+ * tratamiento pertenece a una sola especialidad o ninguna), y con
+ * Professional via el pivot professional_especialidad (un profesional puede
+ * tener varias).
  */
 class Especialidad extends Model
 {
@@ -27,11 +28,11 @@ class Especialidad extends Model
     ];
 
     /**
-     * @return HasMany<EspecialidadCategoria, $this>
+     * @return HasMany<Treatment, $this>
      */
-    public function categorias(): HasMany
+    public function treatments(): HasMany
     {
-        return $this->hasMany(EspecialidadCategoria::class);
+        return $this->hasMany(Treatment::class);
     }
 
     /**

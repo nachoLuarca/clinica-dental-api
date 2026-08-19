@@ -24,10 +24,14 @@ class EspecialidadStoreRequest extends FormRequest
                 Rule::unique('especialidades', 'nombre')->where('tenant_id', app(TenantContext::class)->tenantId()),
             ],
 
-            // Categorias de tratamiento que cubre (Treatment::categoria,
-            // texto libre). Opcional; reemplaza por completo el set actual.
-            'categorias' => ['sometimes', 'array'],
-            'categorias.*' => ['string', 'max:255'],
+            // Tratamientos que cubre esta especialidad (FK real). Opcional;
+            // reemplaza por completo el set actual (ver
+            // TreatmentRepository::syncEspecialidad).
+            'treatment_ids' => ['sometimes', 'array'],
+            'treatment_ids.*' => [
+                'integer',
+                Rule::exists('treatments', 'id')->where('tenant_id', app(TenantContext::class)->tenantId()),
+            ],
         ];
     }
 }

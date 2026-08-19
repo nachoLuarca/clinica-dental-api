@@ -17,8 +17,8 @@ use Illuminate\Http\Request;
  * Solo datos de presentacion -nunca el email interno del profesional-.
  *
  * Con ?treatment_id=, filtra a los profesionales elegibles para la
- * categoria de ese tratamiento (paso 11: especialidad<->categoria), para
- * que el paso "elegir profesional" del wizard ya venga acotado por el
+ * especialidad de ese tratamiento (paso 11/12: FK real Treatment::especialidad_id),
+ * para que el paso "elegir profesional" del wizard ya venga acotado por el
  * tratamiento elegido antes.
  */
 class ProfessionalController extends Controller
@@ -30,16 +30,16 @@ class ProfessionalController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $categoria = null;
+        $especialidadId = null;
 
         if ($request->filled('treatment_id')) {
             $treatment = $this->treatments->find((int) $request->input('treatment_id'))
                 ?? throw (new ModelNotFoundException)->setModel(Treatment::class);
 
-            $categoria = $treatment->categoria;
+            $especialidadId = $treatment->especialidad_id;
         }
 
-        $data = $this->professionals->allActivosParaCategoria($categoria)->map(fn ($p) => [
+        $data = $this->professionals->allActivosParaEspecialidad($especialidadId)->map(fn ($p) => [
             'id' => $p->id,
             'nombre' => $p->nombre,
             'apellido' => $p->apellido,

@@ -53,8 +53,8 @@ class DatabaseSeeder extends Seeder
 
         $this->sembrarStaff();
         [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia] = $this->sembrarProfesionales();
-        $this->sembrarEspecialidades($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia);
         $tratamientos = $this->sembrarTratamientos();
+        $this->sembrarEspecialidades($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $tratamientos);
         $pacientes = $this->sembrarPacientes();
         $this->sembrarCitasDiagnosticosYPresupuesto($profesionalGeneral, $profesionalOrtodoncia, $tratamientos, $pacientes);
     }
@@ -171,47 +171,53 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Catalogo de especialidades (paso 11) + su mapeo a categorias de
-     * tratamiento + asignacion a los 3 profesionales demo. Sin esto, el
-     * filtro de reserva por especialidad<->categoria no tiene nada que
-     * filtrar (ver ProfessionalRepository::allActivosParaCategoria: sin
-     * mapeo configurado, no filtra -asi que esto no es estrictamente
-     * necesario para que la demo funcione-, pero sin sembrarlo no se puede
-     * probar el filtro en si).
+     * Catalogo de especialidades (paso 11) + su relacion real (FK) con los
+     * tratamientos que cubre + asignacion a los 3 profesionales demo. Sin
+     * esto, el filtro de reserva por especialidad no tiene nada que filtrar
+     * (ver ProfessionalRepository::allActivosParaEspecialidad: sin
+     * tratamiento con especialidad asignada, no filtra -asi que esto no es
+     * estrictamente necesario para que la demo funcione-, pero sin
+     * sembrarlo no se puede probar el filtro en si).
      *
      * Mapeo elegido (conocimiento de dominio dental): un odontologo general
-     * cubre las categorias mas comunes del catalogo (prevencion, cirugia
+     * cubre los tratamientos mas comunes del catalogo (prevencion, cirugia
      * menor, restauracion, estetica); ortodoncia y endodoncia son
-     * especialidades acotadas a su propia categoria.
+     * especialidades acotadas a su propio tratamiento.
+     *
+     * @param  array<string, Treatment>  $tratamientos  indexado por nombre (ver sembrarTratamientos)
      */
     private function sembrarEspecialidades(
         Professional $general,
         Professional $ortodoncia,
         Professional $endodoncia,
+        array $tratamientos,
     ): void {
         $general->especialidades()->sync([
-            $this->sembrarEspecialidad('Odontologia General', ['Prevencion', 'Cirugia', 'Restauracion', 'Estetica'])->id,
+            $this->sembrarEspecialidad('Odontologia General', $tratamientos, [
+                'Limpieza dental', 'Extraccion simple', 'Resina compuesta', 'Blanqueamiento dental',
+            ])->id,
         ]);
         $ortodoncia->especialidades()->sync([
-            $this->sembrarEspecialidad('Ortodoncia', ['Ortodoncia'])->id,
+            $this->sembrarEspecialidad('Ortodoncia', $tratamientos, ['Control de ortodoncia'])->id,
         ]);
         $endodoncia->especialidades()->sync([
-            $this->sembrarEspecialidad('Endodoncia', ['Endodoncia'])->id,
+            $this->sembrarEspecialidad('Endodoncia', $tratamientos, ['Tratamiento de conducto'])->id,
         ]);
     }
 
     /**
-     * @param  array<int, string>  $categorias
+     * @param  array<string, Treatment>  $tratamientos
+     * @param  array<int, string>  $nombresTratamientos
      */
-    private function sembrarEspecialidad(string $nombre, array $categorias): Especialidad
+    private function sembrarEspecialidad(string $nombre, array $tratamientos, array $nombresTratamientos): Especialidad
     {
         $especialidad = Especialidad::firstOrCreate(
             ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
         );
 
-        foreach ($categorias as $categoria) {
-            $especialidad->categorias()->firstOrCreate(['categoria' => $categoria]);
-        }
+        $ids = array_map(fn (string $nombreTratamiento) => $tratamientos[$nombreTratamiento]->id, $nombresTratamientos);
+
+        Treatment::query()->whereIn('id', $ids)->update(['especialidad_id' => $especialidad->id]);
 
         return $especialidad;
     }

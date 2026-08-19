@@ -72,9 +72,9 @@ class AvailabilityService
 
     /**
      * Modo "cualquier profesional disponible": agrega los slots libres de
-     * los profesionales activos del tenant elegibles para la categoria del
-     * tratamiento (paso 11: filtro por especialidad<->categoria; ver
-     * ProfessionalRepository::allActivosParaCategoria). Cada slot trae su propio
+     * los profesionales activos del tenant elegibles para la especialidad
+     * del tratamiento (paso 11/12: filtro por especialidad via FK real; ver
+     * ProfessionalRepository::allActivosParaEspecialidad). Cada slot trae su propio
      * professional_id (dos profesionales con el mismo horario libre generan
      * dos entradas), ordenados por hora, para que el frontend pueda mostrar
      * "10:00 (con la Dra. X)" sin adivinar quien lo cubre.
@@ -90,7 +90,7 @@ class AvailabilityService
         $fechaKey = $date->toDateString();
         $duracion = (int) $treatment->duracion_minutos;
 
-        $slots = $this->professionals->allActivosParaCategoria($treatment->categoria)
+        $slots = $this->professionals->allActivosParaEspecialidad($treatment->especialidad_id)
             ->flatMap(function (Professional $professional) use ($fechaKey, $date, $duracion) {
                 $slotsDelProfesional = $this->cache->remember(
                     (int) $this->tenant->tenantId(),

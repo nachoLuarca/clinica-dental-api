@@ -11,10 +11,10 @@ use Tests\Concerns\InteractsWithReservas;
 use Tests\TestCase;
 
 /**
- * Filtro de reserva por especialidad<->categoria del tratamiento (paso 11):
- * el listado publico de profesionales, la disponibilidad agregada
- * "cualquier profesional" y el auto-asignado al reservar deben acotarse a
- * los profesionales cuya especialidad cubre la categoria del tratamiento.
+ * Filtro de reserva por especialidad del tratamiento (paso 11/12, via FK
+ * real Treatment::especialidad_id): el listado publico de profesionales, la
+ * disponibilidad agregada "cualquier profesional" y el auto-asignado al
+ * reservar deben acotarse a los profesionales con esa especialidad.
  */
 class FiltroEspecialidadTest extends TestCase
 {
@@ -26,14 +26,9 @@ class FiltroEspecialidadTest extends TestCase
         Cache::flush();
     }
 
-    private function especialidad(Tenant $tenant, string $nombre, array $categorias): Especialidad
+    private function especialidad(Tenant $tenant, string $nombre): Especialidad
     {
-        $especialidad = Especialidad::create(['tenant_id' => $tenant->id, 'nombre' => $nombre]);
-        foreach ($categorias as $categoria) {
-            $especialidad->categorias()->create(['categoria' => $categoria]);
-        }
-
-        return $especialidad;
+        return Especialidad::create(['tenant_id' => $tenant->id, 'nombre' => $nombre]);
     }
 
     public function test_listado_publico_sin_treatment_id_no_filtra(): void
@@ -41,8 +36,8 @@ class FiltroEspecialidadTest extends TestCase
         $tenant = Tenant::factory()->create();
         $ortodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '17:00');
         $endodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '17:00');
-        $this->especialidad($tenant, 'Ortodoncia', ['Ortodoncia'])->professionals()->attach($ortodoncista);
-        $this->especialidad($tenant, 'Endodoncia', ['Endodoncia'])->professionals()->attach($endodoncista);
+        $this->especialidad($tenant, 'Ortodoncia')->professionals()->attach($ortodoncista);
+        $this->especialidad($tenant, 'Endodoncia')->professionals()->attach($endodoncista);
 
         $this->withHeaders(['X-Clinica' => $tenant->slug])
             ->getJson('/api/publico/profesionales')
@@ -50,15 +45,19 @@ class FiltroEspecialidadTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
-    public function test_listado_publico_con_treatment_id_filtra_por_categoria(): void
+    public function test_listado_publico_con_treatment_id_filtra_por_especialidad(): void
     {
         $tenant = Tenant::factory()->create();
         $ortodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '17:00');
         $endodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '17:00');
-        $this->especialidad($tenant, 'Ortodoncia', ['Ortodoncia'])->professionals()->attach($ortodoncista);
-        $this->especialidad($tenant, 'Endodoncia', ['Endodoncia'])->professionals()->attach($endodoncista);
+        $especialidadOrto = $this->especialidad($tenant, 'Ortodoncia');
+        $especialidadOrto->professionals()->attach($ortodoncista);
+        $this->especialidad($tenant, 'Endodoncia')->professionals()->attach($endodoncista);
 
-        $tratamientoOrto = Treatment::factory()->create(['tenant_id' => $tenant->id, 'categoria' => 'Ortodoncia']);
+        $tratamientoOrto = Treatment::factory()->create([
+            'tenant_id' => $tenant->id,
+            'especialidad_id' => $especialidadOrto->id,
+        ]);
 
         $response = $this->withHeaders(['X-Clinica' => $tenant->slug])
             ->getJson("/api/publico/profesionales?treatment_id={$tratamientoOrto->id}")
@@ -75,12 +74,13 @@ class FiltroEspecialidadTest extends TestCase
 
         $ortodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '11:00');
         $endodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '11:00');
-        $this->especialidad($tenant, 'Ortodoncia', ['Ortodoncia'])->professionals()->attach($ortodoncista);
-        $this->especialidad($tenant, 'Endodoncia', ['Endodoncia'])->professionals()->attach($endodoncista);
+        $especialidadOrto = $this->especialidad($tenant, 'Ortodoncia');
+        $especialidadOrto->professionals()->attach($ortodoncista);
+        $this->especialidad($tenant, 'Endodoncia')->professionals()->attach($endodoncista);
 
         $tratamientoOrto = Treatment::factory()->create([
             'tenant_id' => $tenant->id,
-            'categoria' => 'Ortodoncia',
+            'especialidad_id' => $especialidadOrto->id,
             'duracion_minutos' => 60,
         ]);
 
@@ -103,12 +103,13 @@ class FiltroEspecialidadTest extends TestCase
 
         $ortodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '11:00');
         $endodoncista = $this->profesionalConHorario($tenant, 1, '09:00', '11:00');
-        $this->especialidad($tenant, 'Ortodoncia', ['Ortodoncia'])->professionals()->attach($ortodoncista);
-        $this->especialidad($tenant, 'Endodoncia', ['Endodoncia'])->professionals()->attach($endodoncista);
+        $especialidadOrto = $this->especialidad($tenant, 'Ortodoncia');
+        $especialidadOrto->professionals()->attach($ortodoncista);
+        $this->especialidad($tenant, 'Endodoncia')->professionals()->attach($endodoncista);
 
         $tratamientoOrto = Treatment::factory()->create([
             'tenant_id' => $tenant->id,
-            'categoria' => 'Ortodoncia',
+            'especialidad_id' => $especialidadOrto->id,
             'duracion_minutos' => 60,
         ]);
 

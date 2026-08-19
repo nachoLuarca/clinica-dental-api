@@ -10,7 +10,7 @@ class EspecialidadRepository implements EspecialidadRepositoryInterface
 {
     public function all(): Collection
     {
-        return Especialidad::query()->with('categorias')->orderBy('nombre')->get();
+        return Especialidad::query()->with('treatments')->orderBy('nombre')->get();
     }
 
     public function find(int $id, array $with = []): ?Especialidad
@@ -33,16 +33,5 @@ class EspecialidadRepository implements EspecialidadRepositoryInterface
     public function delete(Especialidad $especialidad): void
     {
         $especialidad->delete();
-    }
-
-    public function syncCategorias(Especialidad $especialidad, array $categorias): void
-    {
-        // Reemplazo total, igual que ProfessionalScheduleRepository con los
-        // horarios: se borran las categorias actuales y se recrean.
-        $especialidad->categorias()->delete();
-
-        foreach ($categorias as $categoria) {
-            $especialidad->categorias()->create(['categoria' => $categoria]);
-        }
     }
 }

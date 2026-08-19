@@ -5,34 +5,37 @@ namespace Tests\Feature\Cruds;
 use App\Models\Especialidad;
 use App\Models\Professional;
 use App\Models\Tenant;
+use App\Models\Treatment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithStaffAuth;
 use Tests\TestCase;
 
 /**
  * CRUD de especialidades (paso 11) y su asignacion a profesionales
- * (Professional puede tener mas de una).
+ * (Professional puede tener mas de una) y a tratamientos (paso 12: FK real
+ * Treatment::especialidad_id).
  */
 class EspecialidadCrudTest extends TestCase
 {
     use InteractsWithStaffAuth, RefreshDatabase;
 
-    public function test_staff_puede_crear_especialidad_con_categorias(): void
+    public function test_staff_puede_crear_especialidad_con_tratamientos(): void
     {
         $tenant = Tenant::factory()->create();
+        $treatment = Treatment::factory()->create(['tenant_id' => $tenant->id]);
 
         $response = $this->withToken($this->staffTokenFor($tenant))
             ->postJson('/api/staff/especialidades', [
                 'nombre' => 'Ortodoncia',
-                'categorias' => ['Ortodoncia'],
+                'treatment_ids' => [$treatment->id],
             ]);
 
         $response->assertCreated()
             ->assertJsonPath('data.nombre', 'Ortodoncia')
-            ->assertJsonCount(1, 'data.categorias');
+            ->assertJsonCount(1, 'data.treatments');
 
         $this->assertDatabaseHas('especialidades', ['nombre' => 'Ortodoncia', 'tenant_id' => $tenant->id]);
-        $this->assertDatabaseHas('especialidad_categoria', ['categoria' => 'Ortodoncia']);
+        $this->assertDatabaseHas('treatments', ['id' => $treatment->id, 'especialidad_id' => $response->json('data.id')]);
     }
 
     public function test_nombre_de_especialidad_es_unico_por_tenant(): void
@@ -62,21 +65,24 @@ class EspecialidadCrudTest extends TestCase
             ->assertJsonPath('data.nombre', 'Endodoncia');
     }
 
-    public function test_staff_puede_actualizar_y_reemplazar_categorias(): void
+    public function test_staff_puede_actualizar_y_reemplazar_tratamientos(): void
     {
         $tenant = Tenant::factory()->create();
         $especialidad = Especialidad::create(['tenant_id' => $tenant->id, 'nombre' => 'General']);
-        $especialidad->categorias()->create(['categoria' => 'Prevencion']);
+        $prevencion = Treatment::factory()->create(['tenant_id' => $tenant->id, 'especialidad_id' => $especialidad->id]);
+        [$restauracion, $estetica] = Treatment::factory(2)->create(['tenant_id' => $tenant->id]);
 
         $this->withToken($this->staffTokenFor($tenant))
             ->putJson("/api/staff/especialidades/{$especialidad->id}", [
-                'categorias' => ['Restauracion', 'Estetica'],
+                'treatment_ids' => [$restauracion->id, $estetica->id],
             ])
             ->assertOk()
-            ->assertJsonCount(2, 'data.categorias');
+            ->assertJsonCount(2, 'data.treatments');
 
-        $this->assertDatabaseCount('especialidad_categoria', 2);
-        $this->assertDatabaseMissing('especialidad_categoria', ['categoria' => 'Prevencion']);
+        $this->assertDatabaseCount('treatments', 3);
+        $this->assertDatabaseHas('treatments', ['id' => $restauracion->id, 'especialidad_id' => $especialidad->id]);
+        $this->assertDatabaseHas('treatments', ['id' => $estetica->id, 'especialidad_id' => $especialidad->id]);
+        $this->assertDatabaseHas('treatments', ['id' => $prevencion->id, 'especialidad_id' => null]);
     }
 
     public function test_staff_puede_eliminar_especialidad(): void

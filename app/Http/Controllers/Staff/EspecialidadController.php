@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * CRUD del catalogo de especialidades (guard 'staff'). Sin paginar: es un
  * catalogo chico pensado para selects (ver tambien Professional::especialidades
- * y Especialidad::categorias para el mapeo a categorias de tratamiento).
+ * y Especialidad::treatments para los tratamientos que cubre).
  */
 class EspecialidadController extends Controller
 {
