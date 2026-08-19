@@ -29,6 +29,21 @@ class SecurityHeadersTest extends TestCase
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
-            ->assertHeader('Referrer-Policy', 'no-referrer');
+            ->assertHeader('Referrer-Policy', 'no-referrer')
+            ->assertHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    }
+
+    public function test_la_documentacion_tiene_una_csp_propia_que_permite_el_cdn_de_swagger(): void
+    {
+        $this->get('/api/documentation')
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', implode('; ', [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "img-src 'self' data: https://cdn.jsdelivr.net",
+                "connect-src 'self'",
+                "frame-ancestors 'none'",
+            ]));
     }
 }
