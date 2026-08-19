@@ -12,7 +12,7 @@ use RuntimeException;
  */
 class OperacionSobreSiMismoException extends RuntimeException
 {
-    public function __construct(string $message = 'No podes realizar esta accion sobre tu propia cuenta.')
+    public function __construct(string $message = 'No puedes realizar esta accion sobre tu propia cuenta.')
     {
         parent::__construct($message);
     }

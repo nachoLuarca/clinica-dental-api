@@ -104,7 +104,7 @@ class UserManagementService
         $quitaGestion = $teniaGestion && ! $tendraGestion;
 
         if ($quitaGestion && $user->id === $actor->id) {
-            throw new OperacionSobreSiMismoException('No podes quitarte a vos mismo el permiso de gestionar roles/usuarios.');
+            throw new OperacionSobreSiMismoException('No puedes quitarte a ti mismo el permiso de gestionar roles/usuarios.');
         }
 
         return DB::transaction(function () use ($user, $rolNuevo, $quitaGestion) {
@@ -129,7 +129,7 @@ class UserManagementService
 
         if (! $activo) {
             if ($user->id === $actor->id) {
-                throw new OperacionSobreSiMismoException('No podes desactivar tu propia cuenta.');
+                throw new OperacionSobreSiMismoException('No puedes desactivar tu propia cuenta.');
             }
 
             if ($user->can(RoleProvisioner::PERMISO_GESTION)
