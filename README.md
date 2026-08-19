@@ -334,9 +334,10 @@ profesionales de golpe en la reserva.
 Trunk-based: todo converge a `main`, sin pull requests (estandar reconocido —
 Google, Meta, research de DORA/Accelerate — no un atajo).
 
-- **Cambios chicos**: commit directo a `main`.
-- **Cambios grandes o riesgosos**: rama de vida corta (`feature/*` o `fix/*`)
-  -> `git merge --no-ff` a `main` (sin PR), y se borra la rama despues.
+- **Todo cambio, sin excepcion por tamano**: rama de vida corta sacada de
+  `main`, nombrada segun el tipo de cambio (`fix/*` correccion, `feature/*` se
+  agrega algo nuevo, `chore/*` mantenimiento) -> tests en verde -> `git merge
+  --no-ff` a `main` (sin PR), y se borra la rama despues.
 - **No negociable**: tests en verde antes de cada commit/merge a `main` — es la
   red de seguridad que reemplaza al code review.
 - Mensajes en [Conventional Commits](https://www.conventionalcommits.org/),
