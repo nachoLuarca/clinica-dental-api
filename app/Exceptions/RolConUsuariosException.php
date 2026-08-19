@@ -12,7 +12,7 @@ use RuntimeException;
  */
 class RolConUsuariosException extends RuntimeException
 {
-    public function __construct(string $message = 'No se puede eliminar un rol con staff asignado. Reasignalos primero.')
+    public function __construct(string $message = 'No se puede eliminar un rol con staff asignado. Reasigna el staff a otro rol primero.')
     {
         parent::__construct($message);
     }

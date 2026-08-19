@@ -53,7 +53,7 @@ class RolesYPermisosTest extends TestCase
             // ("User does not have the right permissions") y con un stack
             // trace completo filtrado en el body (APP_DEBUG=true en dev).
             ->assertExactJson([
-                'message' => 'No tenes permiso para realizar esta accion.',
+                'message' => 'No tienes permiso para realizar esta accion.',
                 'error' => 'permiso_denegado',
             ]);
     }

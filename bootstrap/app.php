@@ -8,6 +8,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
@@ -65,7 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // (modo prueba de este proyecto) se filtra un stack trace completo de
         // ~150 lineas en la respuesta 403.
         $exceptions->render(fn (UnauthorizedException $e, Request $request) => response()->json([
-            'message' => 'No tenes permiso para realizar esta accion.',
+            'message' => 'No tienes permiso para realizar esta accion.',
             'error' => 'permiso_denegado',
         ], 403));
 
@@ -87,4 +88,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'message' => 'No estas autenticado. Inicia sesion para continuar.',
             'error' => 'no_autenticado',
         ], 401));
+
+        // Sin interceptarla, el 429 de rate limiting devuelve el mensaje en
+        // ingles de Laravel ("Too Many Attempts.") y, con APP_DEBUG=true,
+        // filtra un stack trace completo -mismo problema que las tres
+        // excepciones de arriba-.
+        $exceptions->render(fn (ThrottleRequestsException $e, Request $request) => response()->json([
+            'message' => 'Demasiados intentos. Intenta de nuevo en unos minutos.',
+            'error' => 'demasiados_intentos',
+        ], 429));
     })->create();
