@@ -34,4 +34,13 @@ interface TreatmentRepositoryInterface
     public function delete(Treatment $treatment): void;
 
     public function existsSlug(string $slug, ?int $excludeId = null): bool;
+
+    /**
+     * Reemplaza por completo el set de tratamientos que pertenecen a una
+     * especialidad: los tratamientos fuera del set quedan sin especialidad
+     * (especialidad_id = null), los del set pasan a apuntarle.
+     *
+     * @param  array<int, int>  $treatmentIds
+     */
+    public function syncEspecialidad(int $especialidadId, array $treatmentIds): void;
 }

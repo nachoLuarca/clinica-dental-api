@@ -152,8 +152,8 @@ class AppointmentService
 
     /**
      * Modo "cualquier profesional disponible": prueba, en orden, cada
-     * profesional activo elegible para la categoria del tratamiento (paso
-     * 11) cuyo horario cubra el slot pedido. Si el primer candidato pierde
+     * profesional activo elegible para la especialidad del tratamiento (paso
+     * 11/12, via FK real) cuyo horario cubra el slot pedido. Si el primer candidato pierde
      * la carrera contra otra reserva concurrente (indice unico parcial),
      * sigue con el siguiente en vez de fallar de una -es la ventaja real de
      * no pedir un profesional especifico-. Si ninguno tiene el horario
@@ -163,7 +163,7 @@ class AppointmentService
      */
     private function crearConCualquierProfesionalDisponible(Treatment $treatment, Carbon $inicio, Carbon $fin, array $base): Appointment
     {
-        $candidatos = $this->professionals->allActivosParaCategoria($treatment->categoria)->filter(
+        $candidatos = $this->professionals->allActivosParaEspecialidad($treatment->especialidad_id)->filter(
             fn (Professional $p) => $this->dentroDeHorario($p, $inicio, $fin) && ! $this->appointments->hasOverlap($p->id, $inicio, $fin)
         );
 

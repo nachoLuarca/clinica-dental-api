@@ -28,12 +28,4 @@ interface EspecialidadRepositoryInterface
     public function update(Especialidad $especialidad, array $data): Especialidad;
 
     public function delete(Especialidad $especialidad): void;
-
-    /**
-     * Reemplaza por completo las categorias de tratamiento que cubre la
-     * especialidad por el set dado.
-     *
-     * @param  array<int, string>  $categorias
-     */
-    public function syncCategorias(Especialidad $especialidad, array $categorias): void;
 }

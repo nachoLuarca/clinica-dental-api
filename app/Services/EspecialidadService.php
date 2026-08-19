@@ -4,18 +4,21 @@ namespace App\Services;
 
 use App\Models\Especialidad;
 use App\Repositories\Contracts\EspecialidadRepositoryInterface;
+use App\Repositories\Contracts\TreatmentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Reglas de negocio del catalogo de especialidades y su mapeo a categorias
- * de tratamiento (paso 11: filtro de reserva por especialidad<->categoria).
+ * Reglas de negocio del catalogo de especialidades y su relacion con los
+ * tratamientos que cubre (paso 11/12: filtro de reserva por especialidad,
+ * via Treatment::especialidad_id).
  */
 class EspecialidadService
 {
     public function __construct(
         private readonly EspecialidadRepositoryInterface $especialidades,
+        private readonly TreatmentRepositoryInterface $treatments,
     ) {}
 
     /**
@@ -28,7 +31,7 @@ class EspecialidadService
 
     public function find(int $id): Especialidad
     {
-        return $this->especialidades->find($id, ['categorias'])
+        return $this->especialidades->find($id, ['treatments'])
             ?? throw (new ModelNotFoundException)->setModel(Especialidad::class);
     }
 
@@ -38,16 +41,16 @@ class EspecialidadService
     public function create(array $data): Especialidad
     {
         return DB::transaction(function () use ($data) {
-            $categorias = $data['categorias'] ?? null;
-            unset($data['categorias']);
+            $treatmentIds = $data['treatment_ids'] ?? null;
+            unset($data['treatment_ids']);
 
             $especialidad = $this->especialidades->create($data);
 
-            if (is_array($categorias)) {
-                $this->especialidades->syncCategorias($especialidad, $categorias);
+            if (is_array($treatmentIds)) {
+                $this->treatments->syncEspecialidad($especialidad->id, $treatmentIds);
             }
 
-            return $especialidad->load('categorias');
+            return $especialidad->load('treatments');
         });
     }
 
@@ -59,16 +62,16 @@ class EspecialidadService
         return DB::transaction(function () use ($id, $data) {
             $especialidad = $this->find($id);
 
-            $categorias = $data['categorias'] ?? null;
-            unset($data['categorias']);
+            $treatmentIds = $data['treatment_ids'] ?? null;
+            unset($data['treatment_ids']);
 
             $this->especialidades->update($especialidad, $data);
 
-            if (is_array($categorias)) {
-                $this->especialidades->syncCategorias($especialidad, $categorias);
+            if (is_array($treatmentIds)) {
+                $this->treatments->syncEspecialidad($especialidad->id, $treatmentIds);
             }
 
-            return $especialidad->refresh()->load('categorias');
+            return $especialidad->refresh()->load('treatments');
         });
     }
 

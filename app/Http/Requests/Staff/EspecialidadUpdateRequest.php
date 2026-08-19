@@ -26,8 +26,11 @@ class EspecialidadUpdateRequest extends FormRequest
                     ->ignore($this->route('especialidad')),
             ],
 
-            'categorias' => ['sometimes', 'array'],
-            'categorias.*' => ['string', 'max:255'],
+            'treatment_ids' => ['sometimes', 'array'],
+            'treatment_ids.*' => [
+                'integer',
+                Rule::exists('treatments', 'id')->where('tenant_id', app(TenantContext::class)->tenantId()),
+            ],
         ];
     }
 }
