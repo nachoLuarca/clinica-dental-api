@@ -40,6 +40,7 @@
         <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="NOTIFICACIONES_REINTENTOS_BACKOFF_MS" value="0" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
@@ -59,6 +60,7 @@
         <server name="DB_PASSWORD" value=""/>
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="NOTIFICACIONES_REINTENTOS_BACKOFF_MS" value="0"/>
         <server name="SESSION_DRIVER" value="array"/>
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>

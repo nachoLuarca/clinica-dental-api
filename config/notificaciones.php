@@ -38,6 +38,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Reintentos por canal (best-effort)
+    |--------------------------------------------------------------------------
+    |
+    | Un fallo de canal (WhatsApp/correo caido de forma transitoria) no debe
+    | perder la notificacion sin al menos un par de reintentos con espera.
+    | Los reintentos son MANUALES, dentro del propio job (no delegados al
+    | mecanismo de retry de la cola): asi el best-effort se mantiene identico
+    | sin importar el driver de cola (incluido 'sync', usado en tests), donde
+    | dejar que la excepcion se propague tumbaria la request.
+    |
+    */
+
+    'reintentos' => [
+        'intentos' => (int) env('NOTIFICACIONES_REINTENTOS', 3),
+        'backoff_ms' => (int) env('NOTIFICACIONES_REINTENTOS_BACKOFF_MS', 300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Correo
     |--------------------------------------------------------------------------
     |
