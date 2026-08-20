@@ -532,6 +532,75 @@ paths:
         '404': { description: Clinica inexistente }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/pacientes/verificar-rut:
+    post:
+      tags: [Publico]
+      summary: "Paso de Identificacion: confirma si un RUT ya es paciente"
+      description: |
+        Sin login, sin segundo factor (RUT+fecha_nacimiento como el resto de
+        la gestion publica de citas): protegido con Cloudflare Turnstile,
+        validado server-side contra el secret de TURNSTILE_SECRET_KEY. No
+        revela ningun dato del paciente si existe, solo un booleano.
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rut, turnstile_token]
+              properties:
+                rut: { type: string, example: "12.345.678-9" }
+                turnstile_token: { type: string, description: Token del widget de Turnstile del frontend }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      existe: { type: boolean }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '422': { description: RUT invalido o token de Turnstile no verificado }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/pacientes:
+    post:
+      tags: [Publico]
+      summary: "Paso de Identificacion: alta de paciente sin login"
+      description: |
+        Se usa cuando /publico/pacientes/verificar-rut respondio existe=false.
+        Sin password, sin token de sesion Sanctum (el login con cuenta queda
+        para una etapa futura del proyecto).
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PatientRegistroInput' }
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      nombre: { type: string }
+                      apellido: { type: string }
+                      rut: { type: string }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # --------------------------- DOCUMENTACION ----------------------------
   /openapi.yaml:
@@ -702,6 +771,18 @@ components:
         duracion_minutos: { type: integer, minimum: 5, maximum: 480, default: 30 }
         es_diferencial: { type: boolean, description: Atencion diferencial / no listada }
         activo: { type: boolean }
+
+    PatientRegistroInput:
+      type: object
+      required: [rut, nombre, apellido, telefono, fecha_nacimiento, acepta_tratamiento_datos]
+      properties:
+        rut: { type: string, example: "12.345.678-9" }
+        nombre: { type: string }
+        apellido: { type: string }
+        email: { type: string, format: email, nullable: true }
+        telefono: { type: string, example: "+56912345678" }
+        fecha_nacimiento: { type: string, format: date }
+        acepta_tratamiento_datos: { type: boolean, description: "Debe venir en true (checkbox obligatorio)" }
 
     BudgetInput:
       type: object

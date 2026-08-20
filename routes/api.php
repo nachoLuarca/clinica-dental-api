@@ -7,6 +7,7 @@ use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
 use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
+use App\Http\Controllers\Publico\PatientRegistroController;
 use App\Http\Controllers\Publico\ProfessionalController as PublicoProfessionalController;
 use App\Http\Controllers\Publico\TenantController as PublicoTenantController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
@@ -58,6 +59,12 @@ Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->gr
     // de nacimiento (ver PatientLookupService) en vez de un token Sanctum.
     Route::get('citas', [PublicoPatientAppointmentController::class, 'index']);
     Route::delete('citas/{appointment}', [PublicoPatientAppointmentController::class, 'destroy']);
+
+    // Paso de Identificacion por RUT del flujo de reserva (sin login, sin
+    // password): confirma si el RUT ya es paciente (protegido con Turnstile,
+    // ver PatientRegistroService) y da de alta uno nuevo si no lo es.
+    Route::post('pacientes/verificar-rut', [PatientRegistroController::class, 'verificarRut']);
+    Route::post('pacientes', [PatientRegistroController::class, 'store']);
 });
 
 // --- STAFF (portal clinica) ---

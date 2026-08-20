@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Cloudflare Turnstile: verificacion humana en el paso de Identificacion
+    // por RUT del flujo de reserva publico (ver App\Support\TurnstileVerifier).
+    // El secret NUNCA va en el codigo ni se comparte fuera del .env del
+    // servidor; se configura a mano ahi.
+    'turnstile' => [
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
 ];
