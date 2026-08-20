@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\Cache;
  *
  * Diseno de la clave e invalidacion:
  *  - El resultado se guarda SIN TTL (rememberForever): no expira por tiempo,
- *    solo se invalida por evento (crear/cancelar cita), como pide la arquitectura.
- *  - Se etiqueta por tenant + profesional + fecha. La invalidacion hace flush de
- *    ESA etiqueta, borrando de una sola vez todas las variantes por duracion de
- *    tratamiento de ese profesional/fecha (que comparten los mismos slots base).
+ *    solo se invalida por evento, como pide la arquitectura.
+ *  - Cada entrada lleva DOS tags: uno por tenant+profesional+fecha (para
+ *    invalidar UNA fecha puntual al crear/cancelar una cita) y otro por
+ *    tenant+profesional a secas (para invalidar TODAS las fechas cacheadas
+ *    de ese profesional de una vez, al editar su horario semanal -sin esto,
+ *    un profesional editable/mantenible en el papel seguiria mostrando la
+ *    grilla vieja en cualquier fecha ya consultada antes del cambio-).
  *  - La clave concreta incluye ademas la duracion, porque distintos tratamientos
  *    producen distinta grilla de slots sobre el mismo horario.
  *
@@ -44,14 +47,33 @@ class AvailabilityCache
         $this->tagged($tenantId, $professionalId, $fecha)->flush();
     }
 
+    /**
+     * Invalida TODA la disponibilidad cacheada de un profesional, sin
+     * importar la fecha. Se dispara al editar su horario semanal
+     * (ProfessionalService::update): un tramo agregado/borrado/movido
+     * cambia la grilla de cualquier fecha futura, no solo una.
+     */
+    public function forgetForProfessional(int $tenantId, int $professionalId): void
+    {
+        Cache::tags([$this->tagProfessional($tenantId, $professionalId)])->flush();
+    }
+
     private function tagged(int $tenantId, int $professionalId, string $fecha): CacheRepository
     {
-        return Cache::tags([$this->tag($tenantId, $professionalId, $fecha)]);
+        return Cache::tags([
+            $this->tag($tenantId, $professionalId, $fecha),
+            $this->tagProfessional($tenantId, $professionalId),
+        ]);
     }
 
     private function tag(int $tenantId, int $professionalId, string $fecha): string
     {
         return "disponibilidad:t{$tenantId}:p{$professionalId}:{$fecha}";
+    }
+
+    private function tagProfessional(int $tenantId, int $professionalId): string
+    {
+        return "disponibilidad:t{$tenantId}:p{$professionalId}";
     }
 
     private function key(int $tenantId, int $professionalId, string $fecha, int $duracion): string
