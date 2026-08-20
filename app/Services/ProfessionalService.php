@@ -6,6 +6,8 @@ use App\Models\Professional;
 use App\Repositories\Contracts\ProfessionalEspecialidadRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
+use App\Support\AvailabilityCache;
+use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,8 @@ class ProfessionalService
         private readonly ProfessionalRepositoryInterface $professionals,
         private readonly ProfessionalScheduleRepositoryInterface $schedules,
         private readonly ProfessionalEspecialidadRepositoryInterface $especialidades,
+        private readonly AvailabilityCache $cache,
+        private readonly TenantContext $tenant,
     ) {}
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
@@ -79,6 +83,11 @@ class ProfessionalService
             // Solo se reemplazan los horarios/especialidades si vienen en la peticion.
             if (is_array($horarios)) {
                 $this->schedules->syncForProfessional($professional, $horarios);
+
+                // Un horario editado cambia la grilla de CUALQUIER fecha
+                // futura, no solo una: sin esto, una fecha ya cacheada antes
+                // del cambio seguiria mostrando los slots viejos.
+                $this->cache->forgetForProfessional((int) $this->tenant->tenantId(), $professional->id);
             }
 
             if (is_array($especialidadIds)) {
@@ -91,6 +100,10 @@ class ProfessionalService
 
     public function delete(int $id): void
     {
-        $this->professionals->delete($this->find($id));
+        $professional = $this->find($id);
+
+        $this->professionals->delete($professional);
+
+        $this->cache->forgetForProfessional((int) $this->tenant->tenantId(), $professional->id);
     }
 }

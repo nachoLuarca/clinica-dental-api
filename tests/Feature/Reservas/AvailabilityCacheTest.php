@@ -102,4 +102,31 @@ class AvailabilityCacheTest extends TestCase
         // Vuelven a estar los 2 slots libres.
         $this->withToken($sToken)->getJson($url)->assertJsonCount(2, 'data.slots');
     }
+
+    public function test_editar_el_horario_del_profesional_invalida_la_cache(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $fecha = $this->proximaFechaEnDiaSemana(1);
+        $prof = $this->profesionalConHorario($tenant, 1, '09:00', '11:00');
+        $treatment = $this->tratamiento($tenant, 60);
+        $sToken = $this->staffTokenFor($tenant);
+        $url = "/api/staff/availability?professional_id={$prof->id}&treatment_id={$treatment->id}&fecha={$fecha->toDateString()}";
+
+        // Cachea la grilla del horario original: 2 slots (09:00-11:00 / 60min).
+        $this->withToken($sToken)->getJson($url)->assertJsonCount(2, 'data.slots');
+
+        // El staff amplia el horario de ese mismo dia (misma fila de dia_semana,
+        // reemplazo total via 'horarios').
+        $this->withToken($sToken)
+            ->putJson("/api/staff/professionals/{$prof->id}", [
+                'horarios' => [
+                    ['dia_semana' => 1, 'hora_inicio' => '09:00', 'hora_fin' => '13:00'],
+                ],
+            ])
+            ->assertOk();
+
+        // Si la cache no se invalidara, seguiria devolviendo 2 (grilla vieja).
+        // Con el horario ampliado a 4 horas / 60min, deberian ser 4 slots.
+        $this->withToken($sToken)->getJson($url)->assertJsonCount(4, 'data.slots');
+    }
 }
