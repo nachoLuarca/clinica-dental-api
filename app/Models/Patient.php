@@ -20,7 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
  * Un token de staff nunca resuelve a este modelo, y viceversa: los dos guards
  * son independientes.
  */
-#[Fillable(['tenant_id', 'nombre', 'rut', 'email', 'telefono', 'password', 'fecha_nacimiento', 'notas'])]
+#[Fillable(['tenant_id', 'nombre', 'apellido', 'rut', 'email', 'telefono', 'password', 'fecha_nacimiento', 'notas', 'datos_aceptados_at'])]
 #[Hidden(['password', 'remember_token'])]
 class Patient extends Authenticatable
 {
@@ -38,6 +38,7 @@ class Patient extends Authenticatable
             'fecha_nacimiento' => 'date',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'datos_aceptados_at' => 'datetime',
         ];
     }
 
