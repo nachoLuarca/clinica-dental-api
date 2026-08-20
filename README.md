@@ -44,6 +44,22 @@ Todo lo de contenedores vive en `docker/`. El compose levanta:
 
 > Los puertos del host estan remapeados (8081 / 5433 / 8026) para no chocar con
 > otros proyectos que puedas tener corriendo en los puertos por defecto.
+>
+> El bind del puerto de `api` esta explicito a `127.0.0.1:8081` (no `0.0.0.0`):
+> solo accesible desde esta maquina, no desde la red local.
+>
+> **Si en Windows notas respuestas lentas/intermitentes** (medido: 0.2s a 8s+
+> para el mismo `/up`, variable): NO es un problema de DNS ni de `localhost`
+> vs `127.0.0.1` (se reproduce igual pegandole directo a `127.0.0.1`). Es
+> I/O del bind mount (`volumes: ../:/var/www/html`) leyendo el codigo desde
+> el filesystem de Windows a traves de WSL2, que agrega latencia real por
+> archivo. Se habilito `opcache` en el Dockerfile (ayuda, es buena practica
+> igual), pero no elimina el problema de raiz porque `php artisan serve` no
+> es un server persistente tipo produccion. El fix real y ya documentado por
+> Docker es mover el codigo al filesystem nativo de WSL2 (ej. clonar el repo
+> dentro de la distro en vez de en `C:\Users\...` y editar con la extension
+> "WSL" de VS Code) -no se hizo aca porque cambia el flujo de trabajo, es
+> decision de cada quien.
 
 ## Levantar el proyecto
 

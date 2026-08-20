@@ -28,6 +28,17 @@ RUN docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
+# Opcache: sin esto, cada request de 'php artisan serve' reparsea/recompila
+# TODO el codigo (Laravel + vendor/, miles de archivos) desde cero. En Windows
+# el volumen esta bind-mounteado desde el filesystem de Windows a traves de
+# WSL2 -notoriamente lento para I/O de muchos archivos chicos-, asi que sin
+# opcache cada request puede tardar segundos de forma bien variable (se nota
+# como si el server "a veces no respondiera"). validate_timestamps=1 sigue
+# reflejando cambios de codigo al toque (solo hace un stat() por archivo, no
+# lo re-lee entero), asi que no hace falta reiniciar el contenedor al editar.
+RUN docker-php-ext-install opcache
+COPY docker/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
 # Composer (copiado desde la imagen oficial).
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
