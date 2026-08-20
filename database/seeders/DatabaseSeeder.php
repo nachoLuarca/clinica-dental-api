@@ -53,8 +53,8 @@ class DatabaseSeeder extends Seeder
 
         $this->sembrarStaff();
         [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia] = $this->sembrarProfesionales();
-        $tratamientos = $this->sembrarTratamientos();
-        $this->sembrarEspecialidades($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $tratamientos);
+        [$tratamientos, $especialidades] = $this->sembrarCatalogo();
+        $this->asignarEspecialidadesAProfesionales($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $especialidades);
         $pacientes = $this->sembrarPacientes();
         $this->sembrarCitasDiagnosticosYPresupuesto($profesionalGeneral, $profesionalOrtodoncia, $tratamientos, $pacientes);
     }
@@ -171,126 +171,289 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Catalogo de especialidades (paso 11) + su relacion real (FK) con los
-     * tratamientos que cubre + asignacion a los 3 profesionales demo. Sin
-     * esto, el filtro de reserva por especialidad no tiene nada que filtrar
-     * (ver ProfessionalRepository::allActivosParaEspecialidad: sin
-     * tratamiento con especialidad asignada, no filtra -asi que esto no es
-     * estrictamente necesario para que la demo funcione-, pero sin
+     * Catalogo completo de especialidades odontologicas + los tratamientos
+     * que cubre cada una, enlazados por FK real (Treatment::especialidad_id,
+     * paso 12). Sin esto, el filtro de reserva por especialidad no tiene
+     * nada que filtrar (ver ProfessionalRepository::allActivosParaEspecialidad:
+     * sin tratamiento con especialidad asignada, no filtra -asi que esto no
+     * es estrictamente necesario para que la demo funcione-, pero sin
      * sembrarlo no se puede probar el filtro en si).
      *
-     * Mapeo elegido (conocimiento de dominio dental): un odontologo general
-     * cubre los tratamientos mas comunes del catalogo (prevencion, cirugia
-     * menor, restauracion, estetica); ortodoncia y endodoncia son
-     * especialidades acotadas a su propio tratamiento.
-     *
-     * @param  array<string, Treatment>  $tratamientos  indexado por nombre (ver sembrarTratamientos)
+     * @return array{0: array<string, Treatment>, 1: array<string, Especialidad>}
      */
-    private function sembrarEspecialidades(
-        Professional $general,
-        Professional $ortodoncia,
-        Professional $endodoncia,
-        array $tratamientos,
-    ): void {
-        $general->especialidades()->sync([
-            $this->sembrarEspecialidad('Odontologia General', $tratamientos, [
-                'Limpieza dental', 'Extraccion simple', 'Resina compuesta', 'Blanqueamiento dental',
-            ])->id,
-        ]);
-        $ortodoncia->especialidades()->sync([
-            $this->sembrarEspecialidad('Ortodoncia', $tratamientos, ['Control de ortodoncia'])->id,
-        ]);
-        $endodoncia->especialidades()->sync([
-            $this->sembrarEspecialidad('Endodoncia', $tratamientos, ['Tratamiento de conducto'])->id,
-        ]);
-    }
-
-    /**
-     * @param  array<string, Treatment>  $tratamientos
-     * @param  array<int, string>  $nombresTratamientos
-     */
-    private function sembrarEspecialidad(string $nombre, array $tratamientos, array $nombresTratamientos): Especialidad
-    {
-        $especialidad = Especialidad::firstOrCreate(
-            ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
-        );
-
-        $ids = array_map(fn (string $nombreTratamiento) => $tratamientos[$nombreTratamiento]->id, $nombresTratamientos);
-
-        Treatment::query()->whereIn('id', $ids)->update(['especialidad_id' => $especialidad->id]);
-
-        return $especialidad;
-    }
-
-    /**
-     * @return array<string, Treatment>
-     */
-    private function sembrarTratamientos(): array
+    private function sembrarCatalogo(): array
     {
         $definiciones = [
-            'Limpieza dental' => [
-                'categoria' => 'Prevencion',
-                'descripcion' => 'Profilaxis y destartraje.',
-                'incluye' => ['Destartraje', 'Pulido dental', 'Revision general'],
-                'precio' => 25000,
-                'duracion_minutos' => 45,
+            'Odontologia General' => [
+                'Limpieza dental' => [
+                    'categoria' => 'Prevencion',
+                    'descripcion' => 'Profilaxis y destartraje.',
+                    'incluye' => ['Destartraje', 'Pulido dental', 'Revision general'],
+                    'precio' => 25000,
+                    'duracion_minutos' => 45,
+                ],
+                'Extraccion simple' => [
+                    'categoria' => 'Cirugia',
+                    'descripcion' => 'Extraccion de pieza dental sin complicaciones.',
+                    'incluye' => ['Anestesia local', 'Extraccion', 'Indicaciones post-operatorias'],
+                    'precio' => 35000,
+                    'duracion_minutos' => 30,
+                ],
+                'Resina compuesta' => [
+                    'categoria' => 'Restauracion',
+                    'descripcion' => 'Obturacion con resina en pieza dental.',
+                    'incluye' => ['Anestesia local si es necesaria', 'Obturacion con resina'],
+                    'precio' => 30000,
+                    'duracion_minutos' => 45,
+                ],
+                'Blanqueamiento dental' => [
+                    'categoria' => 'Estetica',
+                    'descripcion' => 'Blanqueamiento profesional en consulta.',
+                    'incluye' => ['Evaluacion previa', 'Aplicacion de gel blanqueador', 'Kit de cuidado post-sesion'],
+                    'precio' => 80000,
+                    'duracion_minutos' => 60,
+                ],
+                'Evaluacion inicial' => [
+                    'categoria' => 'Prevencion',
+                    'descripcion' => 'Revision odontologica completa y diagnostico inicial.',
+                    'incluye' => ['Examen clinico', 'Diagnostico', 'Plan de tratamiento sugerido'],
+                    'precio' => 15000,
+                    'duracion_minutos' => 30,
+                ],
             ],
-            'Extraccion simple' => [
-                'categoria' => 'Cirugia',
-                'descripcion' => 'Extraccion de pieza dental sin complicaciones.',
-                'incluye' => ['Anestesia local', 'Extraccion', 'Indicaciones post-operatorias'],
-                'precio' => 35000,
-                'duracion_minutos' => 30,
+            'Ortodoncia' => [
+                'Control de ortodoncia' => [
+                    'categoria' => 'Ortodoncia',
+                    'descripcion' => 'Ajuste y revision mensual de brackets/alineadores.',
+                    'incluye' => ['Revision', 'Ajuste de brackets/alineadores'],
+                    'precio' => 20000,
+                    'duracion_minutos' => 20,
+                ],
+                'Frenillos mecanicos' => [
+                    'categoria' => 'Ortodoncia',
+                    'descripcion' => 'Instalacion de brackets metalicos tradicionales.',
+                    'incluye' => ['Evaluacion', 'Instalacion de brackets', 'Indicaciones de cuidado'],
+                    'precio' => 350000,
+                    'duracion_minutos' => 90,
+                ],
+                'Alineadores invisibles' => [
+                    'categoria' => 'Ortodoncia',
+                    'descripcion' => 'Evaluacion e inicio de tratamiento con alineadores transparentes removibles.',
+                    'incluye' => ['Escaneo digital', 'Plan de alineacion', 'Primer set de alineadores'],
+                    'precio' => 450000,
+                    'duracion_minutos' => 60,
+                ],
+                'Retenedores' => [
+                    'categoria' => 'Ortodoncia',
+                    'descripcion' => 'Confeccion y entrega de retenedores post-tratamiento de ortodoncia.',
+                    'incluye' => ['Toma de impresion', 'Confeccion de retenedor', 'Indicaciones de uso'],
+                    'precio' => 60000,
+                    'duracion_minutos' => 30,
+                ],
+                'Aparatos de expansion palatina' => [
+                    'categoria' => 'Ortodoncia',
+                    'descripcion' => 'Instalacion de aparato para ampliar el paladar en casos de maxilar estrecho.',
+                    'incluye' => ['Evaluacion', 'Instalacion del aparato', 'Control de activacion'],
+                    'precio' => 280000,
+                    'duracion_minutos' => 60,
+                ],
             ],
-            'Resina compuesta' => [
-                'categoria' => 'Restauracion',
-                'descripcion' => 'Obturacion con resina en pieza dental.',
-                'incluye' => ['Anestesia local si es necesaria', 'Obturacion con resina'],
-                'precio' => 30000,
-                'duracion_minutos' => 45,
+            'Endodoncia' => [
+                'Tratamiento de conducto' => [
+                    'categoria' => 'Endodoncia',
+                    'descripcion' => 'Endodoncia (tratamiento de conducto) en pieza dental danada.',
+                    'incluye' => ['Anestesia local', 'Limpieza y sellado del conducto', 'Control post-operatorio'],
+                    'precio' => 60000,
+                    'duracion_minutos' => 60,
+                ],
+                'Retratamiento de conducto' => [
+                    'categoria' => 'Endodoncia',
+                    'descripcion' => 'Repeticion de un tratamiento de conducto previo que no sano correctamente.',
+                    'incluye' => ['Anestesia local', 'Remocion de material anterior', 'Limpieza y resellado'],
+                    'precio' => 90000,
+                    'duracion_minutos' => 75,
+                ],
+                'Apicectomia' => [
+                    'categoria' => 'Endodoncia',
+                    'descripcion' => 'Cirugia menor para remover la punta de la raiz infectada.',
+                    'incluye' => ['Anestesia local', 'Cirugia apical', 'Control post-operatorio'],
+                    'precio' => 150000,
+                    'duracion_minutos' => 60,
+                ],
             ],
-            'Blanqueamiento dental' => [
-                'categoria' => 'Estetica',
-                'descripcion' => 'Blanqueamiento profesional en consulta.',
-                'incluye' => ['Evaluacion previa', 'Aplicacion de gel blanqueador', 'Kit de cuidado post-sesion'],
-                'precio' => 80000,
-                'duracion_minutos' => 60,
+            'Periodoncia' => [
+                'Limpieza profunda' => [
+                    'categoria' => 'Periodoncia',
+                    'descripcion' => 'Raspaje y alisado radicular bajo la encia para tratar enfermedad periodontal.',
+                    'incluye' => ['Anestesia local si es necesaria', 'Raspaje y alisado radicular'],
+                    'precio' => 45000,
+                    'duracion_minutos' => 60,
+                ],
+                'Injerto de encia' => [
+                    'categoria' => 'Periodoncia',
+                    'descripcion' => 'Cirugia para cubrir raices expuestas por recesion de encia.',
+                    'incluye' => ['Anestesia local', 'Injerto de tejido', 'Control post-operatorio'],
+                    'precio' => 200000,
+                    'duracion_minutos' => 90,
+                ],
+                'Cirugia periodontal' => [
+                    'categoria' => 'Periodoncia',
+                    'descripcion' => 'Cirugia para tratar enfermedad periodontal avanzada.',
+                    'incluye' => ['Anestesia local', 'Cirugia de encia', 'Control post-operatorio'],
+                    'precio' => 180000,
+                    'duracion_minutos' => 75,
+                ],
             ],
-            'Control de ortodoncia' => [
-                'categoria' => 'Ortodoncia',
-                'descripcion' => 'Ajuste y revision mensual de brackets/alineadores.',
-                'incluye' => ['Revision', 'Ajuste de brackets/alineadores'],
-                'precio' => 20000,
-                'duracion_minutos' => 20,
+            'Odontopediatria' => [
+                'Sellantes de fosas y fisuras' => [
+                    'categoria' => 'Odontopediatria',
+                    'descripcion' => 'Aplicacion de sellante preventivo en muelas de ninos.',
+                    'incluye' => ['Limpieza previa', 'Aplicacion de sellante'],
+                    'precio' => 15000,
+                    'duracion_minutos' => 20,
+                ],
+                'Tapadura infantil' => [
+                    'categoria' => 'Odontopediatria',
+                    'descripcion' => 'Obturacion de caries en dientes de leche.',
+                    'incluye' => ['Anestesia local si es necesaria', 'Obturacion'],
+                    'precio' => 25000,
+                    'duracion_minutos' => 30,
+                ],
+                'Pulpotomia' => [
+                    'categoria' => 'Odontopediatria',
+                    'descripcion' => 'Tratamiento del nervio en dientes de leche.',
+                    'incluye' => ['Anestesia local', 'Tratamiento pulpar', 'Restauracion'],
+                    'precio' => 45000,
+                    'duracion_minutos' => 45,
+                ],
             ],
-            'Tratamiento de conducto' => [
-                'categoria' => 'Endodoncia',
-                'descripcion' => 'Endodoncia (tratamiento de conducto) en pieza dental danada.',
-                'incluye' => ['Anestesia local', 'Limpieza y sellado del conducto', 'Control post-operatorio'],
-                'precio' => 60000,
-                'duracion_minutos' => 60,
+            'Rehabilitacion Oral' => [
+                'Corona fija' => [
+                    'categoria' => 'Rehabilitacion Oral',
+                    'descripcion' => 'Confeccion e instalacion de corona fija sobre pieza dental.',
+                    'incluye' => ['Preparacion de la pieza', 'Toma de impresion', 'Instalacion de corona'],
+                    'precio' => 180000,
+                    'duracion_minutos' => 60,
+                ],
+                'Puente dental' => [
+                    'categoria' => 'Rehabilitacion Oral',
+                    'descripcion' => 'Reposicion de una o mas piezas ausentes con puente fijo.',
+                    'incluye' => ['Preparacion de pilares', 'Toma de impresion', 'Instalacion de puente'],
+                    'precio' => 350000,
+                    'duracion_minutos' => 90,
+                ],
+                'Carilla estetica' => [
+                    'categoria' => 'Rehabilitacion Oral',
+                    'descripcion' => 'Carilla de porcelana o resina para mejorar la estetica dental.',
+                    'incluye' => ['Preparacion minima', 'Toma de impresion', 'Instalacion de carilla'],
+                    'precio' => 150000,
+                    'duracion_minutos' => 60,
+                ],
+                'Protesis removible' => [
+                    'categoria' => 'Rehabilitacion Oral',
+                    'descripcion' => 'Confeccion de protesis dental removible, total o parcial.',
+                    'incluye' => ['Toma de impresion', 'Prueba de protesis', 'Entrega e instalacion'],
+                    'precio' => 250000,
+                    'duracion_minutos' => 60,
+                ],
+            ],
+            'Implantologia' => [
+                'Implante dental de titanio' => [
+                    'categoria' => 'Implantologia',
+                    'descripcion' => 'Colocacion quirurgica de implante de titanio.',
+                    'incluye' => ['Anestesia local', 'Colocacion del implante', 'Control post-operatorio'],
+                    'precio' => 450000,
+                    'duracion_minutos' => 90,
+                ],
+                'Injerto oseo' => [
+                    'categoria' => 'Implantologia',
+                    'descripcion' => 'Injerto de hueso para preparar la zona antes de un implante.',
+                    'incluye' => ['Anestesia local', 'Injerto de hueso', 'Control post-operatorio'],
+                    'precio' => 300000,
+                    'duracion_minutos' => 75,
+                ],
+                'Elevacion de seno maxilar' => [
+                    'categoria' => 'Implantologia',
+                    'descripcion' => 'Cirugia para levantar el piso del seno maxilar antes de implantar en el maxilar superior.',
+                    'incluye' => ['Anestesia local', 'Elevacion de seno', 'Control post-operatorio'],
+                    'precio' => 400000,
+                    'duracion_minutos' => 90,
+                ],
+            ],
+            'Cirugia Maxilofacial' => [
+                'Extraccion de muela del juicio impactada' => [
+                    'categoria' => 'Cirugia Maxilofacial',
+                    'descripcion' => 'Cirugia para extraer una muela del juicio impactada o incluida.',
+                    'incluye' => ['Anestesia local', 'Cirugia de extraccion', 'Indicaciones post-operatorias'],
+                    'precio' => 120000,
+                    'duracion_minutos' => 60,
+                ],
+                'Cirugia reconstructiva maxilofacial' => [
+                    'categoria' => 'Cirugia Maxilofacial',
+                    'descripcion' => 'Cirugia reconstructiva de tejidos y huesos maxilofaciales.',
+                    'incluye' => ['Evaluacion', 'Cirugia reconstructiva', 'Control post-operatorio'],
+                    'precio' => 600000,
+                    'duracion_minutos' => 120,
+                ],
+                'Correccion de mandibula' => [
+                    'categoria' => 'Cirugia Maxilofacial',
+                    'descripcion' => 'Cirugia ortognatica para corregir la posicion de la mandibula.',
+                    'incluye' => ['Evaluacion', 'Cirugia ortognatica', 'Control post-operatorio'],
+                    'precio' => 800000,
+                    'duracion_minutos' => 120,
+                ],
             ],
         ];
 
         $tratamientos = [];
+        $especialidades = [];
 
-        foreach ($definiciones as $nombre => $datos) {
-            $tratamientos[$nombre] = Treatment::updateOrCreate(
-                ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
-                [
-                    'categoria' => $datos['categoria'],
-                    'descripcion' => $datos['descripcion'],
-                    'incluye' => $datos['incluye'],
-                    'precio' => $datos['precio'],
-                    'duracion_minutos' => $datos['duracion_minutos'],
-                    'slug' => Str::slug($nombre),
-                    'es_diferencial' => false,
-                    'activo' => true,
-                ]
+        foreach ($definiciones as $nombreEspecialidad => $tratamientosDeEspecialidad) {
+            $especialidad = Especialidad::firstOrCreate(
+                ['tenant_id' => $this->tenant->id, 'nombre' => $nombreEspecialidad],
             );
+            $especialidades[$nombreEspecialidad] = $especialidad;
+
+            foreach ($tratamientosDeEspecialidad as $nombre => $datos) {
+                $tratamientos[$nombre] = Treatment::updateOrCreate(
+                    ['tenant_id' => $this->tenant->id, 'nombre' => $nombre],
+                    [
+                        'categoria' => $datos['categoria'],
+                        'especialidad_id' => $especialidad->id,
+                        'descripcion' => $datos['descripcion'],
+                        'incluye' => $datos['incluye'],
+                        'precio' => $datos['precio'],
+                        'duracion_minutos' => $datos['duracion_minutos'],
+                        'slug' => Str::slug($nombre),
+                        'es_diferencial' => false,
+                        'activo' => true,
+                    ]
+                );
+            }
         }
 
-        return $tratamientos;
+        return [$tratamientos, $especialidades];
+    }
+
+    /**
+     * Asigna a cada uno de los 3 profesionales demo la especialidad que le
+     * corresponde (de las 8 sembradas en sembrarCatalogo). Las otras 5
+     * especialidades (Periodoncia, Odontopediatria, Rehabilitacion Oral,
+     * Implantologia, Cirugia Maxilofacial) quedan sin profesional asignado:
+     * el filtro de reserva por especialidad devolveria 0 candidatos para
+     * esos tratamientos hasta que se sume un profesional con esa especialidad.
+     *
+     * @param  array<string, Especialidad>  $especialidades
+     */
+    private function asignarEspecialidadesAProfesionales(
+        Professional $general,
+        Professional $ortodoncia,
+        Professional $endodoncia,
+        array $especialidades,
+    ): void {
+        $general->especialidades()->sync([$especialidades['Odontologia General']->id]);
+        $ortodoncia->especialidades()->sync([$especialidades['Ortodoncia']->id]);
+        $endodoncia->especialidades()->sync([$especialidades['Endodoncia']->id]);
     }
 
     /**
