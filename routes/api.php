@@ -57,7 +57,10 @@ Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->gr
 
     // Gestion de citas SIN login: el paciente se identifica con RUT + fecha
     // de nacimiento (ver PatientLookupService) en vez de un token Sanctum.
+    // store() (paso Confirmar del wizard) se identifica distinto: RUT +
+    // Turnstile, igual que el paso de Identificacion (ver controller).
     Route::get('citas', [PublicoPatientAppointmentController::class, 'index']);
+    Route::post('citas', [PublicoPatientAppointmentController::class, 'store']);
     Route::delete('citas/{appointment}', [PublicoPatientAppointmentController::class, 'destroy']);
 
     // Paso de Identificacion por RUT del flujo de reserva (sin login, sin

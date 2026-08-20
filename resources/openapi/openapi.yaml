@@ -532,6 +532,39 @@ paths:
         '404': { description: Clinica inexistente }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/citas:
+    post:
+      tags: [Publico]
+      summary: "Paso Confirmar: crea una cita sin login"
+      description: |
+        Identifica al paciente por RUT + Turnstile (mismo mecanismo que
+        /publico/pacientes/verificar-rut, un token nuevo -no se reusa el del
+        paso de Identificacion, son de un solo uso-). El RUT debe pertenecer
+        a un paciente ya identificado/registrado; si no, 404. Reutiliza el
+        mismo bloqueo optimista que /paciente/appointments: si el horario se
+        lo gana otra reserva concurrente, 409.
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rut, turnstile_token, treatment_id, fecha_hora]
+              properties:
+                rut: { type: string, example: "12.345.678-9" }
+                turnstile_token: { type: string }
+                professional_id: { type: integer, nullable: true, description: "Sin este campo, auto-asigna el primer profesional disponible" }
+                treatment_id: { type: integer }
+                fecha_hora: { type: string, format: date-time }
+                notas: { type: string, nullable: true }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: "Clinica inexistente, o RUT sin identificar (no paso por el alta/verificacion)" }
+        '409': { description: El horario ya no esta disponible (lo tomo otra reserva concurrente) }
+        '422': { description: Datos invalidos o token de Turnstile no verificado }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /publico/pacientes/verificar-rut:
     post:
       tags: [Publico]
