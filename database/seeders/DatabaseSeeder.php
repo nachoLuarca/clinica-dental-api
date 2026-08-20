@@ -52,9 +52,16 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->sembrarStaff();
-        [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia] = $this->sembrarProfesionales();
+        [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $profesionalPeriodoncia, $profesionalRehabilitacion] = $this->sembrarProfesionales();
         [$tratamientos, $especialidades] = $this->sembrarCatalogo();
-        $this->asignarEspecialidadesAProfesionales($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $especialidades);
+        $this->asignarEspecialidadesAProfesionales(
+            $profesionalGeneral,
+            $profesionalOrtodoncia,
+            $profesionalEndodoncia,
+            $profesionalPeriodoncia,
+            $profesionalRehabilitacion,
+            $especialidades,
+        );
         $pacientes = $this->sembrarPacientes();
         $this->sembrarCitasDiagnosticosYPresupuesto($profesionalGeneral, $profesionalOrtodoncia, $tratamientos, $pacientes);
     }
@@ -106,10 +113,14 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * 3 profesionales activos, cada uno CON horario cargado (sin esto la
-     * disponibilidad siempre da vacia, sin importar la fecha que se pida).
+     * 5 profesionales activos, cada uno CON horario cargado (sin esto la
+     * disponibilidad siempre da vacia, sin importar la fecha que se pida):
+     * uno por cada una de las 3 especialidades originales, mas 2 que cubren
+     * entre ambos las 5 especialidades restantes del catalogo (paso 12),
+     * para que el filtro de reserva por especialidad tenga al menos un
+     * candidato elegible en las 8.
      *
-     * @return array{0: Professional, 1: Professional, 2: Professional}
+     * @return array{0: Professional, 1: Professional, 2: Professional, 3: Professional, 4: Professional}
      */
     private function sembrarProfesionales(): array
     {
@@ -156,7 +167,35 @@ class DatabaseSeeder extends Seeder
             $this->sembrarHorario($endodoncia, $dia, '09:00', '14:00');
         }
 
-        return [$general, $ortodoncia, $endodoncia];
+        $periodoncia = Professional::firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'email' => 'valentina.soto@clinica-demo.cl'],
+            [
+                'nombre' => 'Valentina',
+                'apellido' => 'Soto',
+                'especialidad' => 'Periodoncia y Odontopediatria',
+                'activo' => true,
+            ]
+        );
+        // Lunes, miercoles y viernes por la manana.
+        foreach ([1, 3, 5] as $dia) {
+            $this->sembrarHorario($periodoncia, $dia, '09:00', '13:00');
+        }
+
+        $rehabilitacion = Professional::firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'email' => 'diego.fuentes@clinica-demo.cl'],
+            [
+                'nombre' => 'Diego',
+                'apellido' => 'Fuentes',
+                'especialidad' => 'Rehabilitacion Oral, Implantologia y Cirugia Maxilofacial',
+                'activo' => true,
+            ]
+        );
+        // Martes y jueves, jornada completa.
+        foreach ([2, 4] as $dia) {
+            $this->sembrarHorario($rehabilitacion, $dia, '10:00', '17:00');
+        }
+
+        return [$general, $ortodoncia, $endodoncia, $periodoncia, $rehabilitacion];
     }
 
     private function sembrarHorario(Professional $professional, int $diaSemana, string $inicio, string $fin): void
@@ -436,12 +475,10 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Asigna a cada uno de los 3 profesionales demo la especialidad que le
-     * corresponde (de las 8 sembradas en sembrarCatalogo). Las otras 5
-     * especialidades (Periodoncia, Odontopediatria, Rehabilitacion Oral,
-     * Implantologia, Cirugia Maxilofacial) quedan sin profesional asignado:
-     * el filtro de reserva por especialidad devolveria 0 candidatos para
-     * esos tratamientos hasta que se sume un profesional con esa especialidad.
+     * Asigna a cada uno de los 5 profesionales demo la(s) especialidad(es)
+     * que le corresponden (de las 8 sembradas en sembrarCatalogo), para que
+     * el filtro de reserva por especialidad tenga al menos un candidato
+     * elegible en las 8.
      *
      * @param  array<string, Especialidad>  $especialidades
      */
@@ -449,11 +486,22 @@ class DatabaseSeeder extends Seeder
         Professional $general,
         Professional $ortodoncia,
         Professional $endodoncia,
+        Professional $periodoncia,
+        Professional $rehabilitacion,
         array $especialidades,
     ): void {
         $general->especialidades()->sync([$especialidades['Odontologia General']->id]);
         $ortodoncia->especialidades()->sync([$especialidades['Ortodoncia']->id]);
         $endodoncia->especialidades()->sync([$especialidades['Endodoncia']->id]);
+        $periodoncia->especialidades()->sync([
+            $especialidades['Periodoncia']->id,
+            $especialidades['Odontopediatria']->id,
+        ]);
+        $rehabilitacion->especialidades()->sync([
+            $especialidades['Rehabilitacion Oral']->id,
+            $especialidades['Implantologia']->id,
+            $especialidades['Cirugia Maxilofacial']->id,
+        ]);
     }
 
     /**
