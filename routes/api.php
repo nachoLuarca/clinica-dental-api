@@ -6,6 +6,7 @@ use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
+use App\Http\Controllers\Publico\EspecialidadController as PublicoEspecialidadController;
 use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
 use App\Http\Controllers\Publico\PatientRegistroController;
 use App\Http\Controllers\Publico\ProfessionalController as PublicoProfessionalController;
@@ -49,6 +50,7 @@ Route::get('openapi.yaml', [DocsController::class, 'spec']);
 // (middleware 'tenant.publico'). Rate limiting por tenant + IP ('throttle:publico').
 Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->group(function () {
     Route::get('tratamientos', [CatalogController::class, 'index']);
+    Route::get('especialidades', [PublicoEspecialidadController::class, 'index']);
     Route::get('profesionales', [PublicoProfessionalController::class, 'index']);
     Route::get('availability', [AvailabilityController::class, 'index']);
 

@@ -517,6 +517,49 @@ paths:
         '400': { description: Falta el header X-Clinica }
         '404': { description: Clinica inexistente }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/especialidades:
+    get:
+      tags: [Publico]
+      summary: Catalogo publico de especialidades (con sus tratamientos y cantidad de profesionales)
+      description: |
+        Especialidad -> sus tratamientos activos + cantidad de profesionales
+        activos vinculados, ya armado por el backend en una sola query (evita
+        pedir /publico/profesionales?treatment_id= por especialidad). Solo
+        incluye especialidades con al menos un tratamiento activo; puede
+        traer profesionales_count: 0. Tratamientos sin especialidad asignada
+        NO aparecen aca (siguen viniendo por /publico/tratamientos).
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        nombre: { type: string }
+                        profesionales_count: { type: integer }
+                        tratamientos:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: { type: integer }
+                              nombre: { type: string }
+                              descripcion: { type: string, nullable: true }
+                              precio: { type: string, example: "25000.00" }
+                              duracion_minutos: { type: integer }
+                              slug: { type: string, nullable: true }
+                              activo: { type: boolean }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /publico/availability:
     get:
       tags: [Publico]

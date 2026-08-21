@@ -34,4 +34,18 @@ class EspecialidadRepository implements EspecialidadRepositoryInterface
     {
         $especialidad->delete();
     }
+
+    public function publicasConTratamientosActivos(): Collection
+    {
+        return Especialidad::query()
+            ->whereHas('treatments', fn ($q) => $q->where('activo', true))
+            ->with(['treatments' => fn ($q) => $q->where('activo', true)])
+            // Alias 'as profesionales_count': la relacion se llama
+            // 'professionals' (en ingles, consistente con el resto del
+            // modelo), pero el contrato publico expone la cuenta en
+            // espanol, como el resto de las claves de este endpoint.
+            ->withCount(['professionals as profesionales_count' => fn ($q) => $q->where('professionals.activo', true)])
+            ->orderBy('nombre')
+            ->get();
+    }
 }
