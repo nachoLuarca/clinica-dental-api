@@ -79,4 +79,18 @@ class EspecialidadService
     {
         $this->especialidades->delete($this->find($id));
     }
+
+    /**
+     * Catalogo publico (sin login): especialidad -> sus tratamientos activos
+     * + cantidad de profesionales activos vinculados, ya armado por el
+     * backend en una sola query (evita que el frontend reconstruya la
+     * relacion pidiendo /publico/profesionales?treatment_id= por cada
+     * especialidad).
+     *
+     * @return Collection<int, Especialidad>
+     */
+    public function catalogoPublico(): Collection
+    {
+        return $this->especialidades->publicasConTratamientosActivos();
+    }
 }
