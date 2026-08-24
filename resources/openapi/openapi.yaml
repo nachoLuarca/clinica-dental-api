@@ -560,6 +560,115 @@ paths:
         '400': { description: Falta el header X-Clinica }
         '404': { description: Clinica inexistente }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/sucursales:
+    get:
+      tags: [Publico]
+      summary: Sedes de la clinica (direccion, comuna, telefono y horario)
+      description: Solo sucursales activas. Nunca datos internos, solo lo necesario para mostrar la sede en el sitio del paciente.
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        nombre: { type: string }
+                        direccion: { type: string, nullable: true }
+                        comuna: { type: string, nullable: true }
+                        telefono: { type: string, nullable: true }
+                        horarios:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              dia_semana: { type: integer, description: "0=domingo .. 6=sabado" }
+                              hora_inicio: { type: string, example: "09:00:00" }
+                              hora_fin: { type: string, example: "19:00:00" }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/convenios:
+    get:
+      tags: [Publico]
+      summary: Convenios de salud que acepta la clinica
+      description: Solo convenios activos (Fonasa, isapres, cajas de compensacion, aseguradoras).
+      parameters: [{ $ref: '#/components/parameters/XClinica' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        nombre: { type: string }
+                        tipo: { type: string, enum: [fonasa, isapre, caja_compensacion, aseguradora, otro] }
+                        logo_url: { type: string, nullable: true }
+                        descripcion: { type: string, nullable: true }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /publico/profesionales:
+    get:
+      tags: [Publico]
+      summary: Equipo profesional de la clinica
+      description: |
+        Solo profesionales activos, con foto/bio/matricula y sus
+        especialidades formales. Con ?treatment_id=, filtra a los elegibles
+        para la especialidad de ese tratamiento (ver /publico/availability).
+        Nunca el email interno del profesional.
+      parameters:
+        - { $ref: '#/components/parameters/XClinica' }
+        - name: treatment_id
+          in: query
+          required: false
+          description: "Opcional: filtra a los profesionales elegibles para la especialidad de ese tratamiento"
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        nombre: { type: string }
+                        apellido: { type: string, nullable: true }
+                        especialidad: { type: string, nullable: true, description: "Texto libre historico, solo presentacion" }
+                        foto_url: { type: string, nullable: true }
+                        bio: { type: string, nullable: true }
+                        matricula: { type: string, nullable: true }
+                        especialidades:
+                          type: array
+                          description: Especialidades formales asignadas
+                          items:
+                            type: object
+                            properties:
+                              id: { type: integer }
+                              nombre: { type: string }
+        '400': { description: Falta el header X-Clinica }
+        '404': { description: Clinica inexistente }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /publico/availability:
     get:
       tags: [Publico]

@@ -45,7 +45,7 @@ class AppointmentService
         private readonly NotificadorDeCitas $notificador,
     ) {}
 
-    private const WITH = ['professional', 'patient', 'treatment'];
+    private const WITH = ['professional', 'patient', 'treatment', 'sucursal'];
 
     /**
      * Crea una cita. $patientId, cuando se fuerza (reserva del propio paciente),
@@ -88,7 +88,7 @@ class AppointmentService
             $this->assertDentroDeHorario($professional, $inicio, $fin);
             $this->assertSlotLibre($professional->id, $inicio, $fin);
 
-            $appointment = $this->persistir(['professional_id' => $professional->id] + $base);
+            $appointment = $this->persistir($this->conProfesional($professional, $base));
         } else {
             $appointment = $this->crearConCualquierProfesionalDisponible($treatment, $inicio, $fin, $base);
         }
@@ -169,7 +169,7 @@ class AppointmentService
 
         foreach ($candidatos as $professional) {
             try {
-                return $this->persistir(['professional_id' => $professional->id] + $base);
+                return $this->persistir($this->conProfesional($professional, $base));
             } catch (SlotUnavailableException) {
                 continue;
             }
@@ -178,6 +178,22 @@ class AppointmentService
         throw new SlotUnavailableException(
             'No hay ningun profesional disponible para ese horario. Por favor elige otro.'
         );
+    }
+
+    /**
+     * Agrega professional_id y el snapshot de sucursal_id (la sede del
+     * profesional al momento de reservar, no una FK que se recalcule
+     * despues) a los datos base de la cita.
+     *
+     * @param  array<string, mixed>  $base
+     * @return array<string, mixed>
+     */
+    private function conProfesional(Professional $professional, array $base): array
+    {
+        return [
+            'professional_id' => $professional->id,
+            'sucursal_id' => $professional->sucursal_id,
+        ] + $base;
     }
 
     /**

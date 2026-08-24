@@ -42,6 +42,7 @@ class Appointment extends Model
         'professional_id',
         'patient_id',
         'treatment_id',
+        'sucursal_id',
         'fecha_hora',
         'fecha_hora_fin',
         'duracion_minutos',
@@ -87,5 +88,17 @@ class Appointment extends Model
     public function treatment(): BelongsTo
     {
         return $this->belongsTo(Treatment::class);
+    }
+
+    /**
+     * Snapshot de en que sede se tomo la cita (la del profesional al
+     * momento de reservar, ver AppointmentService::create()). No se
+     * recalcula si el profesional cambia de sede despues.
+     *
+     * @return BelongsTo<Sucursal, $this>
+     */
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 }

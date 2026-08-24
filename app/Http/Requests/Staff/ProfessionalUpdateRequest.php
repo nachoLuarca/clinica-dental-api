@@ -25,6 +25,14 @@ class ProfessionalUpdateRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'activo' => ['boolean'],
 
+            'foto' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,svg,webp', 'max:2048'],
+            'bio' => ['nullable', 'string', 'max:1000'],
+            'matricula' => ['nullable', 'string', 'max:100'],
+            'sucursal_id' => [
+                'nullable', 'integer',
+                Rule::exists('sucursales', 'id')->where('tenant_id', app(TenantContext::class)->tenantId()),
+            ],
+
             'horarios' => ['sometimes', 'array'],
             'horarios.*.dia_semana' => ['required_with:horarios', 'integer', 'between:0,6'],
             'horarios.*.hora_inicio' => ['required_with:horarios', 'date_format:H:i'],

@@ -26,6 +26,15 @@ class ProfessionalStoreRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'activo' => ['boolean'],
 
+            // Ficha publica del equipo profesional (sitio del paciente).
+            'foto' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,svg,webp', 'max:2048'],
+            'bio' => ['nullable', 'string', 'max:1000'],
+            'matricula' => ['nullable', 'string', 'max:100'],
+            'sucursal_id' => [
+                'nullable', 'integer',
+                Rule::exists('sucursales', 'id')->where('tenant_id', app(TenantContext::class)->tenantId()),
+            ],
+
             // Horarios de atencion (opcional). Reemplazan por completo los tramos.
             'horarios' => ['sometimes', 'array'],
             'horarios.*.dia_semana' => ['required_with:horarios', 'integer', 'between:0,6'],

@@ -6,6 +6,8 @@ use App\Models\Professional;
 use App\Models\Tenant;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\InteractsWithStaffAuth;
 use Tests\TestCase;
 
@@ -121,5 +123,44 @@ class ProfessionalCrudTest extends TestCase
             ->postJson('/api/staff/professionals', [])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['nombre']);
+    }
+
+    public function test_staff_puede_crear_profesional_con_foto_bio_y_matricula(): void
+    {
+        Storage::fake('public');
+        $tenant = Tenant::factory()->create();
+        $foto = UploadedFile::fake()->create('ana.png', 10, 'image/png');
+
+        $response = $this->withToken($this->staffTokenFor($tenant))
+            ->post('/api/staff/professionals', [
+                'nombre' => 'Ana',
+                'bio' => 'Odontologa general con 10 anos de experiencia.',
+                'matricula' => '12345-6',
+                'foto' => $foto,
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.bio', 'Odontologa general con 10 anos de experiencia.')
+            ->assertJsonPath('data.matricula', '12345-6');
+
+        $fotoPath = $response->json('data.foto_path');
+        $this->assertNotNull($fotoPath);
+        Storage::disk('public')->assertExists($fotoPath);
+    }
+
+    public function test_reemplazar_la_foto_del_profesional_borra_la_anterior(): void
+    {
+        Storage::fake('public');
+        $tenant = Tenant::factory()->create();
+        $prof = Professional::factory()->create(['tenant_id' => $tenant->id, 'foto_path' => 'profesionales/vieja.png']);
+        Storage::disk('public')->put('profesionales/vieja.png', 'contenido');
+
+        $nueva = UploadedFile::fake()->create('nueva.png', 10, 'image/png');
+
+        $this->withToken($this->staffTokenFor($tenant))
+            ->post("/api/staff/professionals/{$prof->id}", ['_method' => 'PATCH', 'foto' => $nueva])
+            ->assertOk();
+
+        Storage::disk('public')->assertMissing('profesionales/vieja.png');
     }
 }
