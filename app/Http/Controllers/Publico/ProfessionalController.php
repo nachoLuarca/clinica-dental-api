@@ -20,6 +20,9 @@ use Illuminate\Http\Request;
  * especialidad de ese tratamiento (paso 11/12: FK real Treatment::especialidad_id),
  * para que el paso "elegir profesional" del wizard ya venga acotado por el
  * tratamiento elegido antes.
+ *
+ * Incluye foto/bio/matricula y las especialidades formales (equipo
+ * profesional del sitio publico).
  */
 class ProfessionalController extends Controller
 {
@@ -44,6 +47,13 @@ class ProfessionalController extends Controller
             'nombre' => $p->nombre,
             'apellido' => $p->apellido,
             'especialidad' => $p->especialidad,
+            'foto_url' => $p->foto_url,
+            'bio' => $p->bio,
+            'matricula' => $p->matricula,
+            'especialidades' => $p->especialidades->map(fn ($e) => [
+                'id' => $e->id,
+                'nombre' => $e->nombre,
+            ])->values(),
         ])->values();
 
         return response()->json(['data' => $data]);

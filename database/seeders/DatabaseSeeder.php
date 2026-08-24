@@ -5,11 +5,13 @@ namespace Database\Seeders;
 use App\Models\Appointment;
 use App\Models\Budget;
 use App\Models\BudgetItem;
+use App\Models\Convenio;
 use App\Models\Diagnosis;
 use App\Models\Especialidad;
 use App\Models\Patient;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
+use App\Models\Sucursal;
 use App\Models\Tenant;
 use App\Models\Treatment;
 use App\Models\User;
@@ -53,6 +55,8 @@ class DatabaseSeeder extends Seeder
 
         $this->sembrarStaff();
         [$profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $profesionalPeriodoncia, $profesionalRehabilitacion] = $this->sembrarProfesionales();
+        $this->sembrarSucursales($profesionalGeneral, $profesionalOrtodoncia, $profesionalEndodoncia, $profesionalPeriodoncia, $profesionalRehabilitacion);
+        $this->sembrarConvenios();
         [$tratamientos, $especialidades] = $this->sembrarCatalogo();
         $this->asignarEspecialidadesAProfesionales(
             $profesionalGeneral,
@@ -207,6 +211,60 @@ class DatabaseSeeder extends Seeder
             'hora_inicio' => $inicio,
             'hora_fin' => $fin,
         ]);
+    }
+
+    /**
+     * 2 sedes demo, cada una con su horario (puede variar por dia). Los 5
+     * profesionales demo quedan repartidos entre ambas.
+     */
+    private function sembrarSucursales(
+        Professional $general,
+        Professional $ortodoncia,
+        Professional $endodoncia,
+        Professional $periodoncia,
+        Professional $rehabilitacion,
+    ): void {
+        $centro = Sucursal::firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'nombre' => 'Sede Centro'],
+            ['direccion' => 'Alameda 1234', 'comuna' => 'Santiago', 'telefono' => '+56221111111'],
+        );
+        foreach ([1, 2, 3, 4, 5] as $dia) {
+            $centro->horarios()->firstOrCreate(['tenant_id' => $this->tenant->id, 'dia_semana' => $dia, 'hora_inicio' => '09:00', 'hora_fin' => '19:00']);
+        }
+        $centro->horarios()->firstOrCreate(['tenant_id' => $this->tenant->id, 'dia_semana' => 6, 'hora_inicio' => '09:00', 'hora_fin' => '14:00']);
+
+        $providencia = Sucursal::firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'nombre' => 'Sede Providencia'],
+            ['direccion' => 'Av. Providencia 5678', 'comuna' => 'Providencia', 'telefono' => '+56222222222'],
+        );
+        foreach ([2, 4] as $dia) {
+            $providencia->horarios()->firstOrCreate(['tenant_id' => $this->tenant->id, 'dia_semana' => $dia, 'hora_inicio' => '10:00', 'hora_fin' => '18:00']);
+        }
+
+        $general->update(['sucursal_id' => $centro->id]);
+        $endodoncia->update(['sucursal_id' => $centro->id]);
+        $periodoncia->update(['sucursal_id' => $centro->id]);
+        $ortodoncia->update(['sucursal_id' => $providencia->id]);
+        $rehabilitacion->update(['sucursal_id' => $providencia->id]);
+    }
+
+    /**
+     * Catalogo chico de convenios demo (paso 12).
+     */
+    private function sembrarConvenios(): void
+    {
+        $definiciones = [
+            ['nombre' => 'Fonasa', 'tipo' => 'fonasa'],
+            ['nombre' => 'Isapre Colmena', 'tipo' => 'isapre'],
+            ['nombre' => 'Caja Los Andes', 'tipo' => 'caja_compensacion'],
+        ];
+
+        foreach ($definiciones as $datos) {
+            Convenio::firstOrCreate(
+                ['tenant_id' => $this->tenant->id, 'nombre' => $datos['nombre']],
+                ['tipo' => $datos['tipo']],
+            );
+        }
     }
 
     /**

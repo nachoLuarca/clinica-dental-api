@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\ProfessionalFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Profesional de una clinica. Modelo aislado por tenant.
@@ -27,13 +30,44 @@ class Professional extends Model
         'especialidad',
         'email',
         'activo',
+        'sucursal_id',
+        'foto_path',
+        'bio',
+        'matricula',
     ];
+
+    protected $appends = ['foto_url'];
 
     protected function casts(): array
     {
         return [
             'activo' => 'boolean',
         ];
+    }
+
+    /**
+     * URL publica de la foto (disco 'public', servido via /storage). Null
+     * si el profesional todavia no tiene una cargada. Mismo patron que
+     * Tenant::logoUrl().
+     */
+    protected function fotoUrl(): Attribute
+    {
+        return Attribute::get(
+            fn (): ?string => $this->foto_path !== null
+                ? Storage::disk('public')->url($this->foto_path)
+                : null,
+        );
+    }
+
+    /**
+     * Sede a la que pertenece (etapa 1: una sola). Nullable: clinicas que
+     * todavia no cargaron sucursales siguen funcionando igual.
+     *
+     * @return BelongsTo<Sucursal, $this>
+     */
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 
     /**

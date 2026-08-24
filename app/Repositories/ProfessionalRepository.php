@@ -21,7 +21,7 @@ class ProfessionalRepository implements ProfessionalRepositoryInterface
 
     public function allActivosParaEspecialidad(?int $especialidadId): Collection
     {
-        $query = Professional::query()->where('activo', true)->with('schedules');
+        $query = Professional::query()->where('activo', true)->with(['schedules', 'especialidades']);
 
         // Sin especialidad (tratamiento no la tiene asignada): no se filtra
         // (ver contrato).

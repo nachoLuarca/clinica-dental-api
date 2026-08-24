@@ -6,19 +6,23 @@ use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Paciente\AppointmentController as PatientAppointmentController;
 use App\Http\Controllers\Publico\CatalogController;
+use App\Http\Controllers\Publico\ConvenioController as PublicoConvenioController;
 use App\Http\Controllers\Publico\EspecialidadController as PublicoEspecialidadController;
 use App\Http\Controllers\Publico\PatientAppointmentController as PublicoPatientAppointmentController;
 use App\Http\Controllers\Publico\PatientRegistroController;
 use App\Http\Controllers\Publico\ProfessionalController as PublicoProfessionalController;
+use App\Http\Controllers\Publico\SucursalController as PublicoSucursalController;
 use App\Http\Controllers\Publico\TenantController as PublicoTenantController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\BudgetController;
+use App\Http\Controllers\Staff\ConvenioController;
 use App\Http\Controllers\Staff\DiagnosisController;
 use App\Http\Controllers\Staff\EspecialidadController;
 use App\Http\Controllers\Staff\PatientController;
 use App\Http\Controllers\Staff\PermissionController;
 use App\Http\Controllers\Staff\ProfessionalController;
 use App\Http\Controllers\Staff\RoleController;
+use App\Http\Controllers\Staff\SucursalController;
 use App\Http\Controllers\Staff\TenantController;
 use App\Http\Controllers\Staff\TreatmentController;
 use App\Http\Controllers\Staff\UserController;
@@ -70,6 +74,10 @@ Route::prefix('publico')->middleware(['tenant.publico', 'throttle:publico'])->gr
     // ver PatientRegistroService) y da de alta uno nuevo si no lo es.
     Route::post('pacientes/verificar-rut', [PatientRegistroController::class, 'verificarRut']);
     Route::post('pacientes', [PatientRegistroController::class, 'store']);
+
+    // Secciones informativas de la clinica (sitio del paciente).
+    Route::get('sucursales', [PublicoSucursalController::class, 'index']);
+    Route::get('convenios', [PublicoConvenioController::class, 'index']);
 });
 
 // --- STAFF (portal clinica) ---
@@ -133,6 +141,20 @@ Route::prefix('staff')->group(function () {
             ->middlewareFor('store', 'permission:budgets.crear,staff')
             ->middlewareFor('update', 'permission:budgets.editar,staff')
             ->middlewareFor('destroy', 'permission:budgets.eliminar,staff');
+        // Sedes de la clinica (secciones informativas del sitio publico).
+        Route::apiResource('sucursales', SucursalController::class)
+            ->parameters(['sucursales' => 'sucursal'])
+            ->middlewareFor(['index', 'show'], 'permission:sucursales.ver,staff')
+            ->middlewareFor('store', 'permission:sucursales.crear,staff')
+            ->middlewareFor('update', 'permission:sucursales.editar,staff')
+            ->middlewareFor('destroy', 'permission:sucursales.eliminar,staff');
+        // Convenios de salud que acepta la clinica (idem).
+        Route::apiResource('convenios', ConvenioController::class)
+            ->parameters(['convenios' => 'convenio'])
+            ->middlewareFor(['index', 'show'], 'permission:convenios.ver,staff')
+            ->middlewareFor('store', 'permission:convenios.crear,staff')
+            ->middlewareFor('update', 'permission:convenios.editar,staff')
+            ->middlewareFor('destroy', 'permission:convenios.eliminar,staff');
 
         // Gestion de usuarios/roles/permisos de la propia clinica (paso 10).
         // Solo 'admin' llega aca (unico rol con usuarios.*/roles.* en la

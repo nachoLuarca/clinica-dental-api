@@ -10,15 +10,23 @@ use App\Support\AvailabilityCache;
 use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Reglas de negocio de profesionales. El controller solo orquesta; toda la
- * logica (incl. horarios y especialidades) vive aqui y delega el acceso a
- * datos en repositorios.
+ * logica (incl. horarios, especialidades y foto) vive aqui y delega el
+ * acceso a datos en repositorios.
  */
 class ProfessionalService
 {
+    private const FOTO_DISK = 'public';
+
+    private const FOTO_DIR = 'profesionales';
+
+    private const WITH = ['schedules', 'especialidades', 'sucursal'];
+
     public function __construct(
         private readonly ProfessionalRepositoryInterface $professionals,
         private readonly ProfessionalScheduleRepositoryInterface $schedules,
@@ -29,26 +37,30 @@ class ProfessionalService
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->professionals->paginate($perPage, ['schedules', 'especialidades']);
+        return $this->professionals->paginate($perPage, self::WITH);
     }
 
     public function find(int $id): Professional
     {
-        return $this->professionals->find($id, ['schedules', 'especialidades'])
+        return $this->professionals->find($id, self::WITH)
             ?? throw (new ModelNotFoundException)->setModel(Professional::class);
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(array $data): Professional
+    public function create(array $data, ?UploadedFile $foto = null): Professional
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $foto) {
             $horarios = $data['horarios'] ?? null;
             unset($data['horarios']);
 
             $especialidadIds = $data['especialidades'] ?? null;
             unset($data['especialidades']);
+
+            if ($foto !== null) {
+                $data['foto_path'] = $foto->store(self::FOTO_DIR, self::FOTO_DISK);
+            }
 
             $professional = $this->professionals->create($data);
 
@@ -60,16 +72,16 @@ class ProfessionalService
                 $this->especialidades->syncForProfessional($professional, $especialidadIds);
             }
 
-            return $professional->load(['schedules', 'especialidades']);
+            return $professional->load(self::WITH);
         });
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public function update(int $id, array $data): Professional
+    public function update(int $id, array $data, ?UploadedFile $foto = null): Professional
     {
-        return DB::transaction(function () use ($id, $data) {
+        return DB::transaction(function () use ($id, $data, $foto) {
             $professional = $this->find($id);
 
             $horarios = $data['horarios'] ?? null;
@@ -77,6 +89,11 @@ class ProfessionalService
 
             $especialidadIds = $data['especialidades'] ?? null;
             unset($data['especialidades']);
+
+            if ($foto !== null) {
+                $this->eliminarFotoAnterior($professional);
+                $data['foto_path'] = $foto->store(self::FOTO_DIR, self::FOTO_DISK);
+            }
 
             $this->professionals->update($professional, $data);
 
@@ -94,7 +111,7 @@ class ProfessionalService
                 $this->especialidades->syncForProfessional($professional, $especialidadIds);
             }
 
-            return $professional->refresh()->load(['schedules', 'especialidades']);
+            return $professional->refresh()->load(self::WITH);
         });
     }
 
@@ -102,8 +119,16 @@ class ProfessionalService
     {
         $professional = $this->find($id);
 
+        $this->eliminarFotoAnterior($professional);
         $this->professionals->delete($professional);
 
         $this->cache->forgetForProfessional((int) $this->tenant->tenantId(), $professional->id);
+    }
+
+    private function eliminarFotoAnterior(Professional $professional): void
+    {
+        if ($professional->foto_path !== null) {
+            Storage::disk(self::FOTO_DISK)->delete($professional->foto_path);
+        }
     }
 }

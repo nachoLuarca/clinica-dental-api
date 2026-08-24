@@ -8,6 +8,7 @@ use App\Repositories\AppointmentRepository;
 use App\Repositories\BudgetRepository;
 use App\Repositories\Contracts\AppointmentRepositoryInterface;
 use App\Repositories\Contracts\BudgetRepositoryInterface;
+use App\Repositories\Contracts\ConvenioRepositoryInterface;
 use App\Repositories\Contracts\DiagnosisRepositoryInterface;
 use App\Repositories\Contracts\EspecialidadRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
@@ -16,8 +17,11 @@ use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalScheduleRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\StaffRepositoryInterface;
+use App\Repositories\Contracts\SucursalRepositoryInterface;
+use App\Repositories\Contracts\SucursalScheduleRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\TreatmentRepositoryInterface;
+use App\Repositories\ConvenioRepository;
 use App\Repositories\DiagnosisRepository;
 use App\Repositories\EspecialidadRepository;
 use App\Repositories\PatientRepository;
@@ -26,6 +30,8 @@ use App\Repositories\ProfessionalRepository;
 use App\Repositories\ProfessionalScheduleRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\StaffRepository;
+use App\Repositories\SucursalRepository;
+use App\Repositories\SucursalScheduleRepository;
 use App\Repositories\TenantRepository;
 use App\Repositories\TreatmentRepository;
 use App\Tenancy\TenantContext;
@@ -93,6 +99,18 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             ProfessionalEspecialidadRepositoryInterface::class,
             ProfessionalEspecialidadRepository::class,
+        );
+        $this->app->bind(
+            SucursalRepositoryInterface::class,
+            SucursalRepository::class,
+        );
+        $this->app->bind(
+            SucursalScheduleRepositoryInterface::class,
+            SucursalScheduleRepository::class,
+        );
+        $this->app->bind(
+            ConvenioRepositoryInterface::class,
+            ConvenioRepository::class,
         );
 
         // Canales de notificacion (paso 6). Cada uno implementa la misma interfaz

@@ -12,6 +12,10 @@ use Illuminate\Http\Request;
 /**
  * CRUD de profesionales (guard 'staff'). El controller solo orquesta y delega
  * en ProfessionalService; nunca toca Eloquent directamente.
+ *
+ * Subida de foto: mismo criterio que TenantController -el front debe mandar
+ * POST multipart con '_method=PATCH' para actualizar (Laravel no parsea PATCH
+ * multipart nativo)-.
  */
 class ProfessionalController extends Controller
 {
@@ -26,7 +30,9 @@ class ProfessionalController extends Controller
 
     public function store(ProfessionalStoreRequest $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->create($request->validated())], 201);
+        $data = $request->safe()->except('foto');
+
+        return response()->json(['data' => $this->service->create($data, $request->file('foto'))], 201);
     }
 
     public function show(int $professional): JsonResponse
@@ -36,7 +42,9 @@ class ProfessionalController extends Controller
 
     public function update(ProfessionalUpdateRequest $request, int $professional): JsonResponse
     {
-        return response()->json(['data' => $this->service->update($professional, $request->validated())]);
+        $data = $request->safe()->except('foto');
+
+        return response()->json(['data' => $this->service->update($professional, $data, $request->file('foto'))]);
     }
 
     public function destroy(int $professional): JsonResponse
