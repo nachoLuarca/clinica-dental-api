@@ -24,11 +24,13 @@ interface PatientRepositoryInterface
 
     /**
      * Listado paginado dentro del tenant activo (registro clinico del staff).
+     * Con $search, filtra por nombre, apellido, rut o email (coincidencia
+     * parcial, sin distinguir mayusculas/minusculas).
      *
      * @param  array<int, string>  $with
      * @return LengthAwarePaginator<int, Patient>
      */
-    public function paginate(int $perPage = 15, array $with = []): LengthAwarePaginator;
+    public function paginate(int $perPage = 15, array $with = [], ?string $search = null): LengthAwarePaginator;
 
     /**
      * @param  array<int, string>  $with

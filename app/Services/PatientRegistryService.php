@@ -25,9 +25,9 @@ class PatientRegistryService
         private readonly TenantContext $tenant,
     ) {}
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
-        return $this->patients->paginate($perPage);
+        return $this->patients->paginate($perPage, search: $search);
     }
 
     public function find(int $id): Patient

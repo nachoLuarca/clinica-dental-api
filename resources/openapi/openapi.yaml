@@ -211,8 +211,15 @@ paths:
     get:
       tags: [Pacientes]
       summary: Listar pacientes del tenant
+      description: "Con ?search=, filtra por nombre, apellido, rut o email (coincidencia parcial, sin distinguir mayusculas/minusculas)."
       security: [{ staffAuth: [] }]
-      parameters: [{ $ref: '#/components/parameters/PerPage' }]
+      parameters:
+        - { $ref: '#/components/parameters/PerPage' }
+        - name: search
+          in: query
+          required: false
+          description: Busca por nombre, apellido, rut o email (coincidencia parcial)
+          schema: { type: string }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedList' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
