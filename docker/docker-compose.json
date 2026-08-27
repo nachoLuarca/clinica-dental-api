@@ -55,7 +55,7 @@
         "WHATSAPP_SERVICE_TOKEN": "${WHATSAPP_SERVICE_TOKEN:-}",
         "WHATSAPP_AUTH_DIR": "/app/auth"
       },
-      "ports": ["3001:3000"],
+      "ports": ["127.0.0.1:3001:3000"],
       "volumes": ["clinica_dental_whatsapp_auth:/app/auth"],
       "networks": ["clinica_dental_net"]
     },
@@ -64,11 +64,11 @@
       "container_name": "clinica_dental_db",
       "restart": "unless-stopped",
       "environment": {
-        "POSTGRES_DB": "clinica_dental",
-        "POSTGRES_USER": "clinica",
-        "POSTGRES_PASSWORD": "secret"
+        "POSTGRES_DB": "${DB_DATABASE:-clinica_dental}",
+        "POSTGRES_USER": "${DB_USERNAME:-clinica}",
+        "POSTGRES_PASSWORD": "${DB_PASSWORD:-secret}"
       },
-      "ports": ["5433:5432"],
+      "ports": ["127.0.0.1:5433:5432"],
       "volumes": ["clinica_dental_db_data:/var/lib/postgresql/data"],
       "networks": ["clinica_dental_net"]
     },
@@ -76,14 +76,14 @@
       "image": "redis:7-alpine",
       "container_name": "clinica_dental_redis",
       "restart": "unless-stopped",
-      "ports": ["6379:6379"],
+      "ports": ["127.0.0.1:6379:6379"],
       "networks": ["clinica_dental_net"]
     },
     "mailpit": {
       "image": "axllent/mailpit:latest",
       "container_name": "clinica_dental_mailpit",
       "restart": "unless-stopped",
-      "ports": ["8026:8025", "1026:1025"],
+      "ports": ["127.0.0.1:8026:8025", "127.0.0.1:1026:1025"],
       "networks": ["clinica_dental_net"]
     }
   },
