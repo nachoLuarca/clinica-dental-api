@@ -16,6 +16,7 @@ use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -97,4 +98,23 @@ return Application::configure(basePath: dirname(__DIR__))
             'message' => 'Demasiados intentos. Intenta de nuevo en unos minutos.',
             'error' => 'demasiados_intentos',
         ], 429));
+
+        // Red de seguridad final: los 4 render() de arriba cubren los casos
+        // esperados, pero cualquier excepcion no contemplada seguia
+        // filtrando un stack trace completo si APP_DEBUG quedaba mal
+        // seteado (true) en produccion. Esto no depende de APP_DEBUG: en
+        // produccion, cualquier Throwable no manejado responde generico.
+        // Fuera de produccion se devuelve null para no tapar el debugging.
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if (! app()->environment('production')) {
+                return null;
+            }
+
+            $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
+
+            return response()->json([
+                'message' => 'Ocurrio un error inesperado.',
+                'error' => 'error_interno',
+            ], $status);
+        });
     })->create();
