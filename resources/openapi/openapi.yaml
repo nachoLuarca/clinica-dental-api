@@ -637,13 +637,19 @@ paths:
         Solo profesionales activos, con foto/bio/matricula y sus
         especialidades formales. Con ?treatment_id=, filtra a los elegibles
         para la especialidad de ese tratamiento (ver /publico/availability).
-        Nunca el email interno del profesional.
+        Con ?sucursal_id=, filtra ademas a los profesionales de esa sede
+        (combinable con treatment_id). Nunca el email interno del profesional.
       parameters:
         - { $ref: '#/components/parameters/XClinica' }
         - name: treatment_id
           in: query
           required: false
           description: "Opcional: filtra a los profesionales elegibles para la especialidad de ese tratamiento"
+          schema: { type: integer }
+        - name: sucursal_id
+          in: query
+          required: false
+          description: "Opcional: filtra a los profesionales de esa sede"
           schema: { type: integer }
       responses:
         '200':
@@ -665,6 +671,14 @@ paths:
                         foto_url: { type: string, nullable: true }
                         bio: { type: string, nullable: true }
                         matricula: { type: string, nullable: true }
+                        sucursal_id: { type: integer, nullable: true }
+                        sucursal:
+                          type: object
+                          nullable: true
+                          description: "Null si el profesional no tiene sede asignada"
+                          properties:
+                            id: { type: integer }
+                            nombre: { type: string }
                         especialidades:
                           type: array
                           description: Especialidades formales asignadas
@@ -685,6 +699,11 @@ paths:
         - { $ref: '#/components/parameters/ProfessionalId' }
         - { $ref: '#/components/parameters/TreatmentId' }
         - { $ref: '#/components/parameters/Fecha' }
+        - name: sucursal_id
+          in: query
+          required: false
+          description: "Opcional, solo tiene efecto en modo \"cualquier profesional\" (sin professional_id): acota los profesionales agregados a una sede"
+          schema: { type: integer }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AvailabilityResponse' } } } }
         '400': { description: Falta el header X-Clinica }

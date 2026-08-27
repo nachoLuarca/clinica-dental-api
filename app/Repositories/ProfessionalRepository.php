@@ -19,9 +19,9 @@ class ProfessionalRepository implements ProfessionalRepositoryInterface
         return Professional::query()->where('activo', true)->with('schedules')->orderBy('nombre')->get();
     }
 
-    public function allActivosParaEspecialidad(?int $especialidadId): Collection
+    public function allActivosParaEspecialidad(?int $especialidadId, ?int $sucursalId = null): Collection
     {
-        $query = Professional::query()->where('activo', true)->with(['schedules', 'especialidades']);
+        $query = Professional::query()->where('activo', true)->with(['schedules', 'especialidades', 'sucursal']);
 
         // Sin especialidad (tratamiento no la tiene asignada): no se filtra
         // (ver contrato).
@@ -30,6 +30,10 @@ class ProfessionalRepository implements ProfessionalRepositoryInterface
                 'especialidades',
                 fn ($q) => $q->where('especialidades.id', $especialidadId),
             );
+        }
+
+        if ($sucursalId !== null) {
+            $query->where('sucursal_id', $sucursalId);
         }
 
         return $query->orderBy('nombre')->get();

@@ -19,10 +19,12 @@ use Illuminate\Http\Request;
  * Con ?treatment_id=, filtra a los profesionales elegibles para la
  * especialidad de ese tratamiento (paso 11/12: FK real Treatment::especialidad_id),
  * para que el paso "elegir profesional" del wizard ya venga acotado por el
- * tratamiento elegido antes.
+ * tratamiento elegido antes. Con ?sucursal_id=, acota ademas a los
+ * profesionales de esa sede (wizard estilo Dentalink con entry point
+ * Sucursal). Ambos filtros son independientes y combinables.
  *
- * Incluye foto/bio/matricula y las especialidades formales (equipo
- * profesional del sitio publico).
+ * Incluye foto/bio/matricula, las especialidades formales y la sucursal
+ * (equipo profesional del sitio publico).
  */
 class ProfessionalController extends Controller
 {
@@ -42,7 +44,9 @@ class ProfessionalController extends Controller
             $especialidadId = $treatment->especialidad_id;
         }
 
-        $data = $this->professionals->allActivosParaEspecialidad($especialidadId)->map(fn ($p) => [
+        $sucursalId = $request->filled('sucursal_id') ? (int) $request->input('sucursal_id') : null;
+
+        $data = $this->professionals->allActivosParaEspecialidad($especialidadId, $sucursalId)->map(fn ($p) => [
             'id' => $p->id,
             'nombre' => $p->nombre,
             'apellido' => $p->apellido,
@@ -50,6 +54,11 @@ class ProfessionalController extends Controller
             'foto_url' => $p->foto_url,
             'bio' => $p->bio,
             'matricula' => $p->matricula,
+            'sucursal_id' => $p->sucursal_id,
+            'sucursal' => $p->sucursal !== null ? [
+                'id' => $p->sucursal->id,
+                'nombre' => $p->sucursal->nombre,
+            ] : null,
             'especialidades' => $p->especialidades->map(fn ($e) => [
                 'id' => $e->id,
                 'nombre' => $e->nombre,

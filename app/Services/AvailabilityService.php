@@ -74,14 +74,16 @@ class AvailabilityService
      * Modo "cualquier profesional disponible": agrega los slots libres de
      * los profesionales activos del tenant elegibles para la especialidad
      * del tratamiento (paso 11/12: filtro por especialidad via FK real; ver
-     * ProfessionalRepository::allActivosParaEspecialidad). Cada slot trae su propio
-     * professional_id (dos profesionales con el mismo horario libre generan
-     * dos entradas), ordenados por hora, para que el frontend pueda mostrar
-     * "10:00 (con la Dra. X)" sin adivinar quien lo cubre.
+     * ProfessionalRepository::allActivosParaEspecialidad), opcionalmente
+     * acotados a una sede ($sucursalId, wizard con entry point Sucursal).
+     * Cada slot trae su propio professional_id (dos profesionales con el
+     * mismo horario libre generan dos entradas), ordenados por hora, para
+     * que el frontend pueda mostrar "10:00 (con la Dra. X)" sin adivinar
+     * quien lo cubre.
      *
      * @return array<string, mixed>
      */
-    public function forTenant(int $treatmentId, string $fecha): array
+    public function forTenant(int $treatmentId, string $fecha, ?int $sucursalId = null): array
     {
         $treatment = $this->treatments->find($treatmentId)
             ?? throw (new ModelNotFoundException)->setModel(Treatment::class);
@@ -90,7 +92,7 @@ class AvailabilityService
         $fechaKey = $date->toDateString();
         $duracion = (int) $treatment->duracion_minutos;
 
-        $slots = $this->professionals->allActivosParaEspecialidad($treatment->especialidad_id)
+        $slots = $this->professionals->allActivosParaEspecialidad($treatment->especialidad_id, $sucursalId)
             ->flatMap(function (Professional $professional) use ($fechaKey, $date, $duracion) {
                 $slotsDelProfesional = $this->cache->remember(
                     (int) $this->tenant->tenantId(),

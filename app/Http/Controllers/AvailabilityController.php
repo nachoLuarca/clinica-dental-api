@@ -27,6 +27,7 @@ class AvailabilityController extends Controller
             : $this->service->forTenant(
                 (int) $request->integer('treatment_id'),
                 (string) $request->string('fecha'),
+                $request->filled('sucursal_id') ? (int) $request->integer('sucursal_id') : null,
             );
 
         return response()->json(['data' => $data]);
