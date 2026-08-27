@@ -20,7 +20,7 @@ class DiagnosisController extends Controller
     public function index(Request $request, int $patient): JsonResponse
     {
         return $this->paginatedResponse(
-            $this->service->paginateForPatient($patient, (int) $request->integer('per_page', 15))
+            $this->service->paginateForPatient($patient, $this->perPage($request))
         );
     }
 

@@ -38,7 +38,7 @@ class PatientAppointmentController extends Controller
         $patient = $this->lookup->resolver($request->validated('rut'), $request->validated('fecha_nacimiento'));
 
         return $this->paginatedResponse(
-            $this->appointments->paginateForPatient($patient->id, (int) $request->integer('per_page', 15))
+            $this->appointments->paginateForPatient($patient->id, $this->perPage($request))
         );
     }
 

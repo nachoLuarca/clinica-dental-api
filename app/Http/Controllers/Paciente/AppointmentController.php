@@ -24,7 +24,7 @@ class AppointmentController extends Controller
         return $this->paginatedResponse(
             $this->service->paginateForPatient(
                 (int) $request->user()->id,
-                (int) $request->integer('per_page', 15),
+                $this->perPage($request),
             )
         );
     }

@@ -24,7 +24,7 @@ class CatalogController extends Controller
     public function index(Request $request): JsonResponse
     {
         return $this->paginatedResponse(
-            $this->service->paginate((int) $request->integer('per_page', 15))
+            $this->service->paginate($this->perPage($request))
         );
     }
 }
