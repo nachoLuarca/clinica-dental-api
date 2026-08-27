@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import pino from 'pino';
 import { WhatsAppSession } from './whatsapp.js';
@@ -6,6 +7,15 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 const PORT = Number(process.env.PORT || 3000);
 const AUTH_TOKEN = process.env.WHATSAPP_SERVICE_TOKEN || '';
+
+// En produccion no se permite arrancar sin token: sin esta guarda, olvidar
+// WHATSAPP_SERVICE_TOKEN en el .env de produccion dejaba el microservicio
+// sin autenticacion, aceptando envios de WhatsApp de cualquiera con acceso
+// de red al puerto.
+if (process.env.NODE_ENV === 'production' && !AUTH_TOKEN) {
+    logger.error('WHATSAPP_SERVICE_TOKEN es requerido en produccion (NODE_ENV=production).');
+    process.exit(1);
+}
 // Modo mock: no abre una sesion real de WhatsApp, solo loguea los envios. Es el
 // modo por defecto en dev/prueba, para no depender de escanear un QR con un
 // numero real. En produccion se pone WHATSAPP_MOCK=false y se escanea el QR.
@@ -26,7 +36,10 @@ app.use((req, res, next) => {
         return next();
     }
     const header = req.get('authorization') || '';
-    if (header !== `Bearer ${AUTH_TOKEN}`) {
+    const esperado = Buffer.from(`Bearer ${AUTH_TOKEN}`);
+    const recibido = Buffer.from(header);
+    const valido = recibido.length === esperado.length && crypto.timingSafeEqual(recibido, esperado);
+    if (!valido) {
         return res.status(401).json({ ok: false, error: 'no_autorizado' });
     }
     return next();
