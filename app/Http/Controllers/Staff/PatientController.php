@@ -21,7 +21,7 @@ class PatientController extends Controller
     {
         return $this->paginatedResponse(
             $this->service->paginate(
-                (int) $request->integer('per_page', 15),
+                $this->perPage($request),
                 $request->filled('search') ? (string) $request->input('search') : null,
             )
         );

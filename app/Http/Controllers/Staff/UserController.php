@@ -30,7 +30,7 @@ class UserController extends Controller
         ], fn ($v) => $v !== null);
 
         return $this->paginatedResponse(
-            $this->service->paginate($filters, (int) $request->integer('per_page', 15))
+            $this->service->paginate($filters, $this->perPage($request))
         );
     }
 
