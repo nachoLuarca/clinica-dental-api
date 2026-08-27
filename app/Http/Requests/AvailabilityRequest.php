@@ -25,6 +25,10 @@ class AvailabilityRequest extends FormRequest
             // Opcional: sin professional_id, se agregan los slots libres de
             // TODOS los profesionales activos (modo "cualquiera disponible").
             'professional_id' => ['sometimes', 'nullable', 'integer'],
+            // Opcional, solo tiene efecto en modo "cualquiera disponible"
+            // (sin professional_id): acota los profesionales agregados a una
+            // sede (wizard con entry point Sucursal).
+            'sucursal_id' => ['sometimes', 'nullable', 'integer'],
             'treatment_id' => ['required', 'integer'],
             'fecha' => ['required', 'date_format:Y-m-d'],
         ];

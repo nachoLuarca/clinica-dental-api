@@ -32,15 +32,16 @@ interface ProfessionalRepositoryInterface
     /**
      * Profesionales activos elegibles para la especialidad de un tratamiento
      * dado (paso 11: filtro de reserva por especialidad, via FK real
-     * Treatment::especialidad_id).
+     * Treatment::especialidad_id), opcionalmente acotados a una sede.
      *
      * Si $especialidadId es null (tratamiento sin especialidad asignada), no
-     * filtra (se comporta igual que allActivos()) para no romper clinicas
-     * que aun no adoptaron el catalogo de especialidades.
+     * filtra por especialidad (se comporta igual que allActivos()) para no
+     * romper clinicas que aun no adoptaron el catalogo de especialidades. Lo
+     * mismo con $sucursalId null: no filtra por sede.
      *
      * @return Collection<int, Professional>
      */
-    public function allActivosParaEspecialidad(?int $especialidadId): Collection;
+    public function allActivosParaEspecialidad(?int $especialidadId, ?int $sucursalId = null): Collection;
 
     /**
      * Listado paginado. $with permite eager loading explicito (evitar N+1).
