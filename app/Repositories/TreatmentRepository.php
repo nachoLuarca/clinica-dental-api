@@ -64,4 +64,14 @@ class TreatmentRepository implements TreatmentRepositoryInterface
             Treatment::query()->whereIn('id', $treatmentIds)->update(['especialidad_id' => $especialidadId]);
         }
     }
+
+    public function maxDuracionActivaParaEspecialidad(int $especialidadId): ?int
+    {
+        $max = Treatment::query()
+            ->where('especialidad_id', $especialidadId)
+            ->where('activo', true)
+            ->max('duracion_minutos');
+
+        return $max !== null ? (int) $max : null;
+    }
 }

@@ -694,10 +694,30 @@ paths:
     get:
       tags: [Publico]
       summary: Disponibilidad publica (para reservar sin login previo)
+      description: |
+        professional_id, treatment_id y especialidad_id son todos opcionales
+        en el schema (por eso no se marcan required aca), pero con reglas
+        cruzadas validadas por el backend:
+          - Con professional_id: treatment_id es obligatorio (duracion sin
+            ambiguedad, la del tratamiento elegido).
+          - Sin professional_id: treatment_id O especialidad_id es
+            obligatorio, pero no ambos a la vez. Con especialidad_id (wizard
+            sin tratamiento puntual todavia, entry points
+            Especialidad/Profesional/Sucursal), la duracion de los slots es
+            la del tratamiento activo mas largo de esa especialidad -
+            garantiza que cualquier tratamiento que se elija despues en el
+            paso Confirmar (POST /publico/citas, que si exige treatment_id)
+            entre en el horario mostrado.
+        Cualquier combinacion invalida devuelve 422.
       parameters:
         - { $ref: '#/components/parameters/XClinica' }
         - { $ref: '#/components/parameters/ProfessionalId' }
         - { $ref: '#/components/parameters/TreatmentId' }
+        - name: especialidad_id
+          in: query
+          required: false
+          description: "Alternativa a treatment_id cuando no hay professional_id (ver arriba)"
+          schema: { type: integer }
         - { $ref: '#/components/parameters/Fecha' }
         - name: sucursal_id
           in: query
@@ -1064,10 +1084,11 @@ components:
         data:
           type: object
           properties:
-            professional_id: { type: integer }
-            treatment_id: { type: integer }
+            professional_id: { type: integer, nullable: true }
+            treatment_id: { type: integer, nullable: true }
+            especialidad_id: { type: integer, nullable: true, description: "Presente solo cuando se consulto por especialidad_id en vez de treatment_id" }
             fecha: { type: string, format: date }
-            duracion_minutos: { type: integer }
+            duracion_minutos: { type: integer, nullable: true, description: "Null si se consulto por especialidad_id y esa especialidad no tiene ningun tratamiento activo (sin duracion de referencia posible)" }
             slots:
               type: array
               items:

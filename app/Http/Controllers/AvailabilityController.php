@@ -18,17 +18,24 @@ class AvailabilityController extends Controller
 
     public function index(AvailabilityRequest $request): JsonResponse
     {
-        $data = $request->filled('professional_id')
-            ? $this->service->forProfessional(
+        $fecha = (string) $request->string('fecha');
+        $sucursalId = $request->filled('sucursal_id') ? (int) $request->integer('sucursal_id') : null;
+
+        if ($request->filled('professional_id')) {
+            // Profesional puntual: treatment_id es obligatorio aca (ver
+            // AvailabilityRequest), sin ambiguedad de duracion posible.
+            $data = $this->service->forProfessional(
                 (int) $request->integer('professional_id'),
                 (int) $request->integer('treatment_id'),
-                (string) $request->string('fecha'),
-            )
-            : $this->service->forTenant(
-                (int) $request->integer('treatment_id'),
-                (string) $request->string('fecha'),
-                $request->filled('sucursal_id') ? (int) $request->integer('sucursal_id') : null,
+                $fecha,
             );
+        } elseif ($request->filled('treatment_id')) {
+            $data = $this->service->forTenant((int) $request->integer('treatment_id'), $fecha, $sucursalId);
+        } else {
+            // Sin professional_id ni treatment_id: entry point Especialidad
+            // del wizard, sin tratamiento puntual todavia.
+            $data = $this->service->forTenantPorEspecialidad((int) $request->integer('especialidad_id'), $fecha, $sucursalId);
+        }
 
         return response()->json(['data' => $data]);
     }
