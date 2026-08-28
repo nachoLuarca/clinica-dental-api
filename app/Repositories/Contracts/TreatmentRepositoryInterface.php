@@ -43,4 +43,17 @@ interface TreatmentRepositoryInterface
      * @param  array<int, int>  $treatmentIds
      */
     public function syncEspecialidad(int $especialidadId, array $treatmentIds): void;
+
+    /**
+     * Duracion (minutos) del tratamiento activo mas largo de la especialidad.
+     * Null si la especialidad no tiene ningun tratamiento activo.
+     *
+     * Usado por disponibilidad publica cuando el wizard todavia no fijo un
+     * tratamiento puntual (entry points Especialidad/Profesional/Sucursal,
+     * estilo Dentalink): se generan los slots con la duracion mas larga
+     * posible para que CUALQUIER tratamiento de esa especialidad que el
+     * paciente elija despues en Confirmar entre en el horario mostrado -evita
+     * que un slot se vea libre y despues rebote con 409 por no alcanzar.
+     */
+    public function maxDuracionActivaParaEspecialidad(int $especialidadId): ?int;
 }

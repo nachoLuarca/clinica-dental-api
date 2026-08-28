@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\Especialidad;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
 use App\Models\Treatment;
 use App\Repositories\Contracts\AppointmentRepositoryInterface;
+use App\Repositories\Contracts\EspecialidadRepositoryInterface;
 use App\Repositories\Contracts\ProfessionalRepositoryInterface;
 use App\Repositories\Contracts\TreatmentRepositoryInterface;
 use App\Support\AvailabilityCache;
@@ -33,6 +35,7 @@ class AvailabilityService
     public function __construct(
         private readonly ProfessionalRepositoryInterface $professionals,
         private readonly TreatmentRepositoryInterface $treatments,
+        private readonly EspecialidadRepositoryInterface $especialidades,
         private readonly AppointmentRepositoryInterface $appointments,
         private readonly AvailabilityCache $cache,
         private readonly TenantContext $tenant,
@@ -64,6 +67,7 @@ class AvailabilityService
         return [
             'professional_id' => $professionalId,
             'treatment_id' => $treatmentId,
+            'especialidad_id' => null,
             'fecha' => $fechaKey,
             'duracion_minutos' => $duracion,
             'slots' => $slots,
@@ -92,7 +96,71 @@ class AvailabilityService
         $fechaKey = $date->toDateString();
         $duracion = (int) $treatment->duracion_minutos;
 
-        $slots = $this->professionals->allActivosParaEspecialidad($treatment->especialidad_id, $sucursalId)
+        return [
+            'professional_id' => null,
+            'treatment_id' => $treatmentId,
+            'especialidad_id' => null,
+            'fecha' => $fechaKey,
+            'duracion_minutos' => $duracion,
+            'slots' => $this->slotsAgregados($treatment->especialidad_id, $sucursalId, $date, $fechaKey, $duracion),
+        ];
+    }
+
+    /**
+     * Modo "cualquier profesional disponible" pedido por especialidad, SIN
+     * tratamiento puntual todavia (wizard estilo Dentalink: los entry points
+     * Especialidad/Profesional/Sucursal muestran disponibilidad antes de que
+     * el paciente elija un tratamiento exacto -eso queda para el paso
+     * Confirmar, que ya exige treatment_id en POST /publico/citas-).
+     *
+     * La duracion de los slots generados es la del tratamiento activo MAS
+     * LARGO de la especialidad (ver TreatmentRepositoryInterface::
+     * maxDuracionActivaParaEspecialidad): garantiza que CUALQUIER tratamiento
+     * de esa especialidad que el paciente termine eligiendo en Confirmar
+     * entra en el horario mostrado -la validacion real en
+     * AppointmentService::create() usa la duracion del tratamiento elegido,
+     * asi que un horario mas corto ahi podria mostrarse libre y despues
+     * rebotar con 409-. Si la especialidad no tiene ningun tratamiento
+     * activo, no hay duracion de referencia posible: se devuelve sin slots.
+     *
+     * @return array<string, mixed>
+     */
+    public function forTenantPorEspecialidad(int $especialidadId, string $fecha, ?int $sucursalId = null): array
+    {
+        $this->especialidades->find($especialidadId)
+            ?? throw (new ModelNotFoundException)->setModel(Especialidad::class);
+
+        $date = Carbon::parse($fecha)->startOfDay();
+        $fechaKey = $date->toDateString();
+        $duracion = $this->treatments->maxDuracionActivaParaEspecialidad($especialidadId);
+
+        return [
+            'professional_id' => null,
+            'treatment_id' => null,
+            'especialidad_id' => $especialidadId,
+            'fecha' => $fechaKey,
+            'duracion_minutos' => $duracion,
+            'slots' => $duracion !== null
+                ? $this->slotsAgregados($especialidadId, $sucursalId, $date, $fechaKey, $duracion)
+                : [],
+        ];
+    }
+
+    /**
+     * Slots libres de todos los profesionales activos elegibles para una
+     * especialidad (y opcionalmente una sede), agregados y ordenados por
+     * hora. Cada slot trae su propio professional_id (dos profesionales con
+     * el mismo horario libre generan dos entradas), para que el frontend
+     * pueda mostrar "10:00 (con la Dra. X)" sin adivinar quien lo cubre.
+     * Compartido por forTenant() y forTenantPorEspecialidad(): el calculo de
+     * slots no depende de si la duracion vino de un tratamiento puntual o de
+     * la mas larga de la especialidad, solo del numero final.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function slotsAgregados(?int $especialidadId, ?int $sucursalId, Carbon $date, string $fechaKey, int $duracion): array
+    {
+        return $this->professionals->allActivosParaEspecialidad($especialidadId, $sucursalId)
             ->flatMap(function (Professional $professional) use ($fechaKey, $date, $duracion) {
                 $slotsDelProfesional = $this->cache->remember(
                     (int) $this->tenant->tenantId(),
@@ -110,14 +178,6 @@ class AvailabilityService
             ->sortBy('fecha_hora')
             ->values()
             ->all();
-
-        return [
-            'professional_id' => null,
-            'treatment_id' => $treatmentId,
-            'fecha' => $fechaKey,
-            'duracion_minutos' => $duracion,
-            'slots' => $slots,
-        ];
     }
 
     /**
